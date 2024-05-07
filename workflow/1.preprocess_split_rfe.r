@@ -37,6 +37,13 @@ HOME <- Sys.getenv("HOME")
 basefolder = file.path(HOME, config$basefolder)
 outdir = file.path(basefolder,config$resfolder)
 
+print("PARAMETERS")
+print(paste("Basefolder is:", basefolder))
+print(paste("Output folder is:", outdir))
+print(paste("Input data file is:", config$datafile))
+
+dir.create(outdir, showWarnings = FALSE, recursive = TRUE)
+
 writeLines(" - saving configuration parameters to log file")
 fname = paste(config$suffix, ".config.r", sep="")
 fname = file.path(outdir, fname)
