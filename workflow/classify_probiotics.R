@@ -14,6 +14,7 @@ library("caretEnsemble")
 ######################################################
 ## parameters
 basefolder = "/home/biscarinif/probiotics"
+outdir = "results"
 ncpu = 8
 seed = 7
 seed_rfe = 325
@@ -89,12 +90,12 @@ print(results_rfe$fit)
 
 # plot(results_rfe, type=c("g", "o"))
 
-fname = file.path(basefolder, "rfe.pdf")
+fname = file.path(basefolder, outdir, "rfe.pdf")
 pdf(fname, width=7, height=5)
 plot(results_rfe, type=c("g", "o"))
 dev.off()
 
-fname = file.path(basefolder, "rfe.png")
+fname = file.path(basefolder, outdir, "rfe.png")
 png(filename=fname)
 plot(results_rfe, type=c("g", "o"))
 dev.off()
@@ -103,7 +104,7 @@ dev.off()
 # List the chosen features
 features = predictors(results_rfe)
 print(features)
-fname = file.path(basefolder, "features.RData")
+fname = file.path(basefolder, outdir, "features.RData")
 save(features, file = fname)
 
 # Prepare datasets (train/test= dataset3 and validation), excluding non-selected features
@@ -233,7 +234,7 @@ summary(results)
 
 # Plot and compare accuracy of models
 
-fname = file.path(basefolder, "acc_methods.pdf")
+fname = file.path(basefolder, outdir, "acc_methods.pdf")
 pdf(fname, width=7, height=5)
 dotplot(results)
 dev.off()
@@ -257,7 +258,7 @@ for (i in seq(length(finalModel))){
 featImp_glm <- varImp(finalModel$glmnet,useModel = FALSE, scale=TRUE)
 print(featImp_glm)
 
-fname = file.path(basefolder, "featImp_glm.pdf")
+fname = file.path(basefolder, outdir, "featImp_glm.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_glm)
 dev.off()
@@ -266,7 +267,7 @@ dev.off()
 featImp_rf <- varImp(finalModel$rf,useModel = FALSE, scale=TRUE)
 print(featImp_rf)
 
-fname = file.path(basefolder, "featImp_rf.pdf")
+fname = file.path(basefolder, outdir, "featImp_rf.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_rf)
 dev.off()
@@ -275,7 +276,7 @@ dev.off()
 featImp_svm <- varImp(finalModel$svmRadial,useModel = FALSE, scale=TRUE)
 print(featImp_svm)
 
-fname = file.path(basefolder, "featImp_svm.pdf")
+fname = file.path(basefolder, outdir, "featImp_svm.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_svm)
 dev.off()
@@ -284,7 +285,7 @@ dev.off()
 featImp_nn <- varImp(finalModel$nnet,useModel = FALSE, scale=TRUE)
 print(featImp_nn)
 
-fname = file.path(basefolder, "featImp_nn.pdf")
+fname = file.path(basefolder, outdir, "featImp_nn.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_nn)
 dev.off()
@@ -293,7 +294,7 @@ dev.off()
 featImp_glm2 <- varImp(finalModel$glmnet,useModel = TRUE, scale=TRUE)
 print(featImp_glm2)
 
-fname = file.path(basefolder, "featImp_glm2.pdf")
+fname = file.path(basefolder, outdir, "featImp_glm2.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_glm2)
 dev.off()
@@ -302,7 +303,7 @@ dev.off()
 featImp_rf2 <- varImp(finalModel$rf,useModel = TRUE, scale=TRUE)
 print(featImp_rf2)
 
-fname = file.path(basefolder, "featImp_rf2.pdf")
+fname = file.path(basefolder, outdir, "featImp_rf2.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_rf2)
 dev.off()
@@ -311,7 +312,7 @@ dev.off()
 featImp_svm2 <- varImp(finalModel$svmRadial,useModel = TRUE, scale=TRUE)
 print(featImp_svm2)
 
-fname = file.path(basefolder, "featImp_svm2.pdf")
+fname = file.path(basefolder, outdir, "featImp_svm2.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_svm2)
 dev.off()
@@ -320,7 +321,7 @@ dev.off()
 featImp_nn2 <- varImp(finalModel$nnet,useModel = TRUE, scale=TRUE)
 print(featImp_nn2)
 
-fname = file.path(basefolder, "featImp_nn2.pdf")
+fname = file.path(basefolder, outdir, "featImp_nn2.pdf")
 pdf(fname, width=7, height=5)
 plot(featImp_nn2)
 dev.off()
@@ -389,7 +390,7 @@ error %>%
     methods == 3 ~ 'SVM',
     TRUE ~ 'NN'))-> error
 
-fname = file.path(basefolder, "errors.pdf")
+fname = file.path(basefolder, outdir, "errors.pdf")
 pdf(fname, width=7, height=2.5)
 ggplot(error, aes(fill=error, y=percentage, x=methods)) + 
   geom_bar(position="dodge", stat="identity") +
@@ -397,7 +398,7 @@ ggplot(error, aes(fill=error, y=percentage, x=methods)) +
         panel.background = element_blank(),axis.line = element_line(colour = "black"))
 dev.off()
 
-fname = file.path(basefolder, "errors.png")
+fname = file.path(basefolder, outdir, "errors.png")
 png(fname)
 ggplot(error, aes(fill=error, y=percentage, x=methods)) + 
   geom_bar(position="dodge", stat="identity") +
@@ -405,10 +406,10 @@ ggplot(error, aes(fill=error, y=percentage, x=methods)) +
         panel.background = element_blank(),axis.line = element_line(colour = "black"))
 dev.off()
 
-fname = file.path(basefolder, "errors.csv")
+fname = file.path(basefolder, outdir, "errors.csv")
 fwrite(x = error, file = fname)
 
-fname = file.path(basefolder, "mcc.csv")
+fname = file.path(basefolder, outdir, "mcc.csv")
 fwrite(x = MCC, file = fname)
 
 # ROC curves 
@@ -417,7 +418,7 @@ alg <- unique(pred.val$metodo)
 alg2 <- c('RLR', 'RF', 'SVM', 'NN')
 ind <- 1 #index to access the methods name in the metodi vector.
 
-fname = file.path(basefolder, "roc.pdf")
+fname = file.path(basefolder, outdir, "roc.pdf")
 pdf(fname)
 par(mfrow=c(2,2))
 par(pty = "s")
@@ -438,7 +439,7 @@ dev.off()
 par(pty = "m")
 
 
-fname = file.path(basefolder, "roc.png")
+fname = file.path(basefolder, outdir, "roc.png")
 png(fname)
 par(mfrow=c(2,2))
 par(pty = "s")
@@ -472,7 +473,7 @@ for (i in 1:length(alg)){
   CM[[i]] <- cm 
 }
 
-fname = file.path(basefolder, "CM.RData")
+fname = file.path(basefolder, outdir, "CM.RData")
 save(CM, file = fname)
 
 # Save workspace, MCC and errors
