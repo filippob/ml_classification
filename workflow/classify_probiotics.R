@@ -94,7 +94,7 @@ pdf(fname, width=7, height=5)
 plot(results_rfe, type=c("g", "o"))
 dev.off()
 
-fname = file.path(basefolder, "rfe.ng")
+fname = file.path(basefolder, "rfe.png")
 png(filename=fname)
 plot(results_rfe, type=c("g", "o"))
 dev.off()
@@ -122,7 +122,7 @@ validation_rfe <- as.data.frame(validation_rfe) #save as dataframe
 
 my_list <- list()
 
-for(i in 1:4) {
+for(i in 1:nrepeats) {
   
   folds <- createMultiFolds(training_rfe$Outcome, k = nfolds, times = 1) #stratification
   
@@ -479,6 +479,4 @@ save(CM, file = fname)
 # save.image("prob_bits.RData")
 
 print("DONE!")
-
-
 
