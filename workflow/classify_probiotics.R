@@ -1,3 +1,4 @@
+## run as Rscprit classify_probiotics.R ncpus=<n. cpus>
 
 # Load libraries
 library("pROC")
@@ -10,26 +11,56 @@ library("data.table")
 library("caretEnsemble")
 
 
+###################################
+## read arguments from command line
+###################################
+allowed_parameters = c(
+  'ncpus'
+)
+
+args <- commandArgs(trailingOnly = TRUE)
+
+print(args)
+for (p in args){
+  pieces = strsplit(p, '=')[[1]]
+  #sanity check for something=somethingElse
+  if (length(pieces) != 2){
+    stop(paste('badly formatted parameter:', p))
+  }
+  if (pieces[1] %in% allowed_parameters)  {
+    assign(pieces[1], pieces[2])
+    next
+  }
+  
+  #if we get here, is an unknown parameter
+  stop(paste('bad parameter:', pieces[1]))
+}
+
+print(paste("N. of CPUs is:", ncpus))
 
 ######################################################
 ## parameters
 basefolder = "/home/biscarinif/probiotics"
 outdir = "results"
-ncpu = 8
+ncpu = ifelse(exists("ncpus") & !is.null(ncpus) & !is.na(ncpus) & ncpus != '', as.integer(ncpus), 4)
+#ncpu = 4
 seed = 7
 seed_rfe = 325
 training_pct = 0.85
 nfolds = 10
 nrepeats = 100
 
+print(paste("N. of CPU that will be used is:", ncpu))
 # Remove warnings
 options(warn=-1)
 
+writeLines(" - assigning CPUs")
 # Setup parallel back end to use multiple processors
 cl = makeCluster(ncpu)
 registerDoParallel(cl)
 ######################################################
 
+writeLines(" - importing data")
 # Import dataset
 fname = file.path(basefolder, "batteri_filtered_TB.csv")
 dataset <- fread(fname)
@@ -477,7 +508,8 @@ fname = file.path(basefolder, outdir, "CM.RData")
 save(CM, file = fname)
 
 # Save workspace, MCC and errors
-# save.image("prob_bits.RData")
+fname = file.path(basefolder, outdir, "probiotics.RData")
+save.image(fname)
 
 print("DONE!")
 
