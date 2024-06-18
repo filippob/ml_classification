@@ -13,6 +13,6 @@ echo " - creating output directory"
 mkdir -p $outdir
 
 echo " - filtering genotype data ... "
-$plink --file $inputfile --allow-extra-chr --chr 1-23 --mac $MAC --mind $MIND --geno 0.01 --bp-space 0 --recode --out ${outdir}/filtered
+$plink --file $inputfile --allow-extra-chr --chr 1-23 --mac $MAC --mind $MIND --geno 0.01 --bp-space 1 --recode --out ${outdir}/filtered
 
 echo "DONE!"
