@@ -28,7 +28,7 @@ wc -l $outfile
 
 echo "copying and renaming the .map file"
 basename="${inputfile%.*}"
-mapfile="${basefolder}/{$basename}.map"
+mapfile="$basefolder/$basename.map"
 
 cp $mapfile "$basefolder/$outdir/pi_cleaned.map"
 
