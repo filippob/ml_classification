@@ -9,4 +9,4 @@ In this first approach we use the **RFE (recursive feature elimination) algorith
 to be later used in the final classification model.
 
 A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used to tell probiotics from non probiotics 
-(an example of **one-class classification** problem).
+(an example of **one-class classification** problem), based on a set of genomic features.
