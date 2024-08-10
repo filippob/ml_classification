@@ -35,7 +35,8 @@ library(glmnet)
 
 basefolder = "/home/filippo/Documents/tania/archaea_bacteria"
 nproc = 4
-nrepeats = 3
+nrepeats_rfe = 3
+nrepeats_cv = 10
 #set.seed(113)
 
 fname = file.path(basefolder, "data/total_final_nozero.csv")
@@ -82,7 +83,7 @@ writeLines(" - running RFE")
 
 # 10-fold cross validation (cv) repeated 100 times
 # Use different seed for cv in rfe and train
-rfectrl_rf <- rfeControl(functions=rfFuncs, method="repeatedcv", number=10, repeats=nrepeats, 
+rfectrl_rf <- rfeControl(functions=rfFuncs, method="repeatedcv", number=10, repeats=nrepeats_rfe, 
                          verbose = FALSE, returnResamp = "final", allowParallel = TRUE) 
 
 # After indicating predictors(3-90) and outcome (1), excluding id (2),
@@ -112,7 +113,7 @@ test_reduced <- as.data.frame(test_reduced) #save as dataframe
 writeLines(" - Model training")
 res.list <- list()
 
-for(i in 1:nrepeats) {
+for(i in 1:nrepeats_cv) {
   
   print(paste("repetition", i))	
   folds <- createMultiFolds(training_reduced$Outcome, k = 10, times = 1) #stratification
