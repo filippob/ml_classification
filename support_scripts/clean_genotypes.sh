@@ -8,7 +8,11 @@ source config.sh ## basefolder from here
 inputfile='data/genotyped_nofilters/PHENOMENA_28122022.ped'
 outdir='Analysis/1.cleaning'
 
-## Rimuovi i controlli (HG00264 & HG00097) con record duplicati nei genotipi (assenti nel dataset dei fenotipi) per poter usare plink: 5 record con family ID 0 e stesso individual ID (HG00264 o HG00097) e 24 record ciascuno HG00XXX_n. (da 1 a 24) con individual e family ID uguali
+echo " - creating output directory"
+mkdir -p $basefolder/$outdir
+
+## Rimuovi i controlli (HG00264 & HG00097) con record duplicati nei genotipi (assenti nel dataset dei fenotipi) per poter usare plink: 
+## 5 record con family ID 0 e stesso individual ID (HG00264 o HG00097) e 24 record ciascuno HG00XXX_n. (da 1 a 24) con individual e family ID uguali
 
 fname=$basefolder/$inputfile
 
