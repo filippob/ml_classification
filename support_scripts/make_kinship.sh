@@ -14,6 +14,6 @@ mkdir -p $outdir
 
 ## make kinship matrix
 echo " - calculating the kinship matrix ... "
-$plink --bfile $inputfile --maf 0.01 --make-rel square gz out=$outdir/pi_kinship
+$plink --bfile $inputfile --maf 0.01 --make-rel square gz --out=$outdir/pi_kinship
 
 echo "DONE!"
