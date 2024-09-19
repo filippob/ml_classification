@@ -1,9 +1,11 @@
+## script to run lasso (ridge) models for regression (continuous target) with glmnet
+## first stub: to be further developed
+
 # Load libraries
 library("glmnet")
 library("ggplot2")
 library("tidyverse")
 library("doParallel")
-library("tidymodels")
 
 options(expressions = 5e5)
 
