@@ -91,31 +91,6 @@ tune_wf <- workflow() %>%
 
 trees_folds <- vfold_cv(training_set, v = k_folds, repeats = nrepeats_cv)
 
-tune_res <- tune_grid(
-  tune_wf,
-  resamples = trees_folds,
-  grid = 10 ## n. of tuning combinations
-)
-
-print(tune_res)
-
-library("repr")
-options(repr.plot.width=14, repr.plot.height=8)
-
-tune_res %>%
-  collect_metrics() %>%
-  filter(.metric == "roc_auc") %>%
-  select(mean, min_n, mtry) %>%
-  pivot_longer(min_n:mtry,
-               values_to = "value",
-               names_to = "parameter"
-  ) %>%
-  ggplot(aes(value, mean, color = parameter)) +
-  geom_point(show.legend = FALSE) +
-  facet_wrap(~parameter, scales = "free_x") +
-  labs(x = NULL, y = "AUC")
-
-
 # We now try to start from $\sqrt{p}$ (classification problem)
 m <- round(sqrt(ncol(training_set)-1),0)
 print(m)
@@ -125,23 +100,84 @@ rf_grid <- grid_regular(
   levels = c(8,4)
 )
 
-print(rf_grid)
+head(rf_grid)
+nrow(rf_grid)
 
 regular_res <- tune_grid(
   tune_wf,
+  metrics = metric_set(roc_auc, accuracy, mcc),
   resamples = trees_folds,
   grid = rf_grid
 )
 
+regular_res |>
+  collect_metrics()
+
+library("repr")
+options(repr.plot.width=14, repr.plot.height=8)
 
 regular_res %>%
   collect_metrics() %>%
-  filter(.metric == "roc_auc") %>%
+  filter(.metric == "mcc") %>%
   mutate(min_n = factor(min_n)) %>%
   ggplot(aes(mtry, mean, color = min_n)) +
   geom_line(alpha = 0.5, size = 1.5) +
   geom_point() +
-  labs(y = "AUC")
+  labs(y = "MCC")
+
+
+best_auc <- select_best(x = regular_res, metric = "mcc")
+show_best(regular_res, metric = "mcc")
+
+# 2.  finalise the model:
+  
+final_rf <- finalize_model(
+  tune_spec,
+  best_auc
+)
+
+print(final_rf)
+
+
+# 3.  finalise the workflow and fit it to the initial split (training and test data):
+  
+final_wf <- workflow() %>%
+  add_recipe(kmer_recipe) %>%
+  add_model(final_rf)
+
+final_res <- final_wf %>%
+  last_fit(kmer_split, metrics = metric_set(roc_auc, accuracy, mcc, brier_class))
+
+# 4.  evaluate the fine-tuned RF model:
+print(final_res)
+final_res %>%
+  collect_metrics()
+
+
+# 5.  get variable importance:
+  
+final_res %>% 
+  pluck(".workflow", 1) %>%   
+  pull_workflow_fit() %>% 
+  #vip(num_features = 20, geom = "point")
+  vip(num_features = 16)
+
+#### Predictions
+
+# We collect the predictions on the test set: for each test observations we get the probabilities of belonging to each of the four classes.
+
+final_res %>%
+  collect_predictions()
+
+
+cm <- final_res %>%
+  collect_predictions() %>%
+  conf_mat(Outcome, .pred_class)
+
+print(cm)
+
+autoplot(cm, type = "heatmap")
+
 
 
 
