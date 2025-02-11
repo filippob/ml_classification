@@ -12,12 +12,11 @@ nproc <- 4
 split_ratio <- 0.80
 method_cv <- "repeatedcv"
 k_folds <- 10
-# nrepeats_rfe <- 10
 nrepeats_cv <- 1
-sampling_method <- "up"
 positive_class <- "vertebrate"
 
 ## Import dataset
+writeLines(" - reading the data ...")
 fname <- file.path(basefolder, input_file)
 dataset <- fread(fname)
 head(dataset)
@@ -29,9 +28,12 @@ dataset <- dataset %>%
 if(sum(is.na(dataset)) == 0) print("No missing data in the dataset: OK!")
 
 ## Setup parallel backend
+writeLines(" - parallelise on the number of declared CPUs")
 cl <- parallel::makeCluster(nproc)
 doParallel::registerDoParallel(cl)
 
+## training/test split
+writeLines(" - splitting the data in training/test stes")
 kmer_dt <- select(dataset, -c(ID))
 kmer_split <- initial_split(kmer_dt, strata = Outcome, prop = split_ratio)
 kmer_train <- training(kmer_split)
@@ -48,8 +50,12 @@ kmer_test <- testing(kmer_split)
 
 library("corrplot")
 V <- cor(kmer_train[,-1])
+fname <- file.path(basefolder, "correlation_plot.png")
+png(fname)
 corrplot(V)
+dev.off()
 
+writeLines(" - preprocessing ... ")
 kmer_recipe <- kmer_train %>%
   recipe(Outcome ~ .) %>%
   # step_corr(all_predictors(), threshold = 0.99) %>%
@@ -72,6 +78,7 @@ head(training_set)
 # -   the engine (R package)
 # 
 # Then we put this in a workflow together with the preprocessing recipe
+writeLines(" - fine-tuning of the hyperparameters ..")
 
 tune_spec <- rand_forest(
   mtry = tune(),
@@ -88,15 +95,15 @@ tune_wf <- workflow() %>%
 #### Tuning the hyperparameters
 
 # We use k-fold cross-validation to tune the hyperparameters in the training set
-
 trees_folds <- vfold_cv(training_set, v = k_folds, repeats = nrepeats_cv)
 
 # We now try to start from $\sqrt{p}$ (classification problem)
 m <- round(sqrt(ncol(training_set)-1),0)
 print(m)
+
 rf_grid <- grid_regular(
-  mtry(range = c(m-3, m+6)),
-  min_n(range = c(3, 9)),
+  mtry(range = c(m-3, m+7)),
+  min_n(range = c(3, 10)),
   levels = c(8,4)
 )
 
@@ -111,7 +118,8 @@ regular_res <- tune_grid(
 )
 
 regular_res |>
-  collect_metrics()
+  collect_metrics() |>
+  print()
 
 library("repr")
 options(repr.plot.width=14, repr.plot.height=8)
