@@ -1,0 +1,8 @@
+## Repository for the code generated and used within the PROB-AI research project (2025)
+
+
+### Phase One
+
+1. code to download sequence data from the NCBI archive (strain level)
+2. calculate statistics on the downloaded sequence data to measure the quality of genome annotation
+3. filter sequence data based on quality and additional criteria (e.g. confirmed probiotic strain)
