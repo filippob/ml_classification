@@ -9,5 +9,5 @@ cd /path/to/the/folder
 Run the tool in the command line with the code,
 
 ```
-   ./gcf_downloader.py -in gcf_numbers.txt -out path/to/download/folder
+./gcf_downloader.py -in gcf_numbers.txt -out path/to/download/folder
 ```
