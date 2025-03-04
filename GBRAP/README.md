@@ -5,7 +5,7 @@ The gcf_downloader tool can download the gbff files from refseq if you know the 
 ```
 cd /path/to/the/folder
 ```
-*If necessary, first set the correct permissions to excute the script using the command, 
+*If necessary, set the correct permissions to excute the script using the command, 
 
 ```
 chmod +x gcf_downloader.py
