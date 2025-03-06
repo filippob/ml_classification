@@ -8,7 +8,7 @@ library("googlesheets4")
 
 ####################################################################
 writeLines(" - configuring access to Google Drive")
-apik = "AIzaSyBbVOwEz8_91ZeQKzdOfEFAx8ohDV83yjE"
+apik = NULL
 gs4_auth_configure(api_key = apik)
 
 ####################################################################
