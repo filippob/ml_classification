@@ -6,9 +6,11 @@ library("dplyr")
 library("tidyverse")
 library("googlesheets4")
 
+args <- commandArgs(TRUE)
+apik = args[1]
+
 ####################################################################
 writeLines(" - configuring access to Google Drive")
-apik = NULL
 gs4_auth_configure(api_key = apik)
 
 ####################################################################
@@ -42,5 +44,10 @@ probs <- probs |>
   filter(probiotic == "yes", ncbi_genome == "yes")
 
 print(paste("N. of selected probiotic strains:", nrow(probs)))
+
+probs |>
+  group_by(target) |>
+  summarise(N = n()) |>
+  print()
 
 print("DONE!!")
