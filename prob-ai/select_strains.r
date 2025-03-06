@@ -42,13 +42,13 @@ probs |>
 
 ####################################################################
 writeLines(" - selecting probiotic strains to download")
-probs <- probs |>
+temp <- probs |>
   select(Organism.Name, Strain, BioSample, BioProject, Assembly, target, probiotic, ncbi_genome, RefSeq.FTP) |>
   filter(probiotic == "yes", ncbi_genome == "yes")
 
-print(paste("N. of selected probiotic strains:", nrow(probs)))
+print(paste("N. of selected probiotic strains:", nrow(temp)))
 
-probs |>
+temp |>
   group_by(target) |>
   summarise(N = n()) |>
   print()
@@ -57,12 +57,12 @@ probs |>
 writeLines(" - writing out results")
 
 print("First few lines of data that will be written out")
-probs |>
+temp |>
   head() |>
   print()
 
 fname = "probiotics_gcf.codes"
-probs |> 
+temp |> 
   pull(RefSeq.FTP) |> 
   write.table(fname, quote = FALSE, row.names = FALSE, col.names = FALSE)
 
@@ -71,5 +71,32 @@ print(paste("GCF code written out to", fname))
 ####################################################################
 print("2) NON-PROBIOTIC STRAINS")
 ####################################################################
+writeLines(" - selecting non-probiotic strains to download")
+temp <- probs |>
+  select(Organism.Name, Strain, BioSample, BioProject, Assembly, target, probiotic, ncbi_genome, RefSeq.FTP) |>
+  filter(probiotic == "no", ncbi_genome == "yes")
+
+print(paste("N. of selected probiotic strains:", nrow(temp)))
+
+temp |>
+  group_by(target) |>
+  summarise(N = n()) |>
+  print()
+
+####################################################################
+writeLines(" - writing out results")
+
+print("First few lines of data that will be written out")
+temp |>
+  head() |>
+  print()
+
+fname = "non_probiotics_gcf.codes"
+temp |> 
+  pull(RefSeq.FTP) |> 
+  write.table(fname, quote = FALSE, row.names = FALSE, col.names = FALSE)
+
+print(paste("GCF code written out to", fname))
+
 
 print("DONE!!")
