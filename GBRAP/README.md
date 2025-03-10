@@ -1,4 +1,4 @@
-The gcf_downloader tool can download the gbff files from refseq if you know the GCF number of the organism you want to download.
+The gcf_downloader tool can download the gbff files from refseq if you know the GCF number of the organism you want to download. If a gbff file for the GCF number already exists in the output folder, the tool will not download it again. 
 1. Create a .txt file with the GCF numbers of all the genomes you want to download. The numbers should not contain spaces and each GCF number should be in a new line.
 2. Go to the directory containing the  tool using the command,
    
