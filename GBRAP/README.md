@@ -25,11 +25,9 @@ chmod +x gcf_downloader.py
 
 ## Tool 2: NC to GCF
 
-The nc_2_gcf tool can retrieve the NCBI assembly accession (GCF) corresponding to a list of NC accession numbers. It queries the NCBI Entrez API and outputs the results into a text file.
+The nc_2_gcf tool can retrieve the NCBI assembly accession (GCF) with the assembly name corresponding to a list of NC accession numbers. It queries the NCBI Entrez API and outputs the results into a text file. 
 
 ### Usage Instructions
-
-
 
 1. Create a CSV file containing NC accession numbers, where each number is on a new line and without spaces.
 
