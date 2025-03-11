@@ -1,4 +1,4 @@
-## GFC Downloader
+## Tool 1: GFC Downloader
    
 The gcf_downloader tool can download the gbff files from refseq if you know the GCF number of the organism you want to download. If a gbff file for the GCF number already exists in the output folder, the tool will not download it again. 
 
@@ -22,7 +22,7 @@ chmod +x gcf_downloader.py
 ./gcf_downloader.py -in gcf_numbers.txt -out path/to/download/folder
 ```
 
-## NC to GCF
+## Tool 2: NC to GCF
 
 The nc_2_gcf tool can retrieve the NCBI assembly accession (GCF) corresponding to a list of NC accession numbers. It queries the NCBI Entrez API and outputs the results into a text file.
 
