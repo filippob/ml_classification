@@ -32,17 +32,28 @@ def download_genome(gcf_number, output_dir="downloads"):
         return
     
     base_url = f"https://ftp.ncbi.nlm.nih.gov/genomes/all/GCF/{triplet_path}/{gcf_number}/"
-    genome_file = f"{gcf_number}_genomic.gbff.gz"
-    genome_url = urljoin(base_url, genome_file)
+    genome_file = f"{gcf_number}_genomic.gbff"
+    genome_gz_file = genome_file + ".gz"
+
     
+    output_gbff_path = Path(output_dir) / genome_file  # Uncompressed file path
+    output_gz_path = Path(output_dir) / genome_gz_file  # Compressed file path
+    
+    # Check if the file already exists
+    if output_gz_path.exists() or output_gbff_path.exists():
+        print(f"gbff file already exists for {gcf_number} in the output directory, skipping download")
+        return
+    
+    
+    genome_url = urljoin(base_url, genome_gz_file)
+
     response = requests.head(genome_url)
     if response.status_code != 200:
         print(f"Genome file not found for {gcf_number}")
         return
     
     os.makedirs(output_dir, exist_ok=True)
-    output_gz_path = Path(output_dir) / genome_file
-    output_gbff_path = output_gz_path.with_suffix("")  # Remove .gz extension
+   
     
     with requests.get(genome_url, stream=True) as r:
         r.raise_for_status()
