@@ -8,6 +8,7 @@ library("data.table")
 ## Parameters
 basefolder <- "/home/filippo/Documents/tania/kmers"
 input_file <- "data/dataset_v_i.csv"
+# input_file <- "data/subset.csv"
 nproc <- 4
 split_ratio <- 0.80
 method_cv <- "repeatedcv"
@@ -58,7 +59,7 @@ dev.off()
 writeLines(" - preprocessing ... ")
 kmer_recipe <- kmer_train %>%
   recipe(Outcome ~ .) %>%
-  # step_corr(all_predictors(), threshold = 0.99) %>%
+  step_corr(all_predictors(), threshold = 0.99) %>%
   step_zv(all_numeric(), -all_outcomes()) %>%
   step_normalize(all_numeric(), -all_outcomes())
 
@@ -97,7 +98,7 @@ trees_folds <- vfold_cv(training_set, v = k_folds, repeats = nrepeats_cv)
 svm_grid <- grid_regular(
   cost(range = c(-6, 1)),
   rbf_sigma(range = c(-6, -2)),
-  levels = c(10,5)
+  levels = c(5,5)
 )
 
 head(svm_grid)
@@ -152,7 +153,7 @@ base_wf <- workflow() %>%
 
 svm_fitted <- base_wf %>%
   add_model(final_svm) %>%
-  fit(kmer_train)
+  fit(training_set)
 
 
 # 4.  evaluate the fine-tuned RF model:
@@ -168,7 +169,8 @@ library("DALEXtra")
 temp <- training_set
 temp$Outcome = as.numeric(temp$Outcome) - 1 
 
-explainer_svm <- explain_tidymodels(svm_fitted, data = temp[,-17], y = temp$Outcome)
+# explainer_svm <- explain_tidymodels(svm_fitted, data = temp[,-17], y = temp$Outcome)
+explainer_svm <- explain_tidymodels(svm_fitted, data = temp, y = temp$Outcome)
 
 vip <- model_parts(explainer = explainer_svm)
 
