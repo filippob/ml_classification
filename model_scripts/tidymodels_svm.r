@@ -140,8 +140,8 @@ final_svm <- finalize_model(
 
 print(final_svm)
 
-
 # 3.  finalise the workflow and fit it to the initial split (training and test data):
+## final workflow for model accuracy
 final_wf <- workflow() %>%
   add_recipe(kmer_recipe) %>%
   add_model(final_svm)
@@ -149,6 +149,7 @@ final_wf <- workflow() %>%
 final_res <- final_wf %>%
   last_fit(kmer_split, metrics = metric_set(roc_auc, accuracy, mcc, brier_class))
 
+## final workflow for variable importance (right interface for DALEX::explain_tidymodels)
 base_wf <- workflow() %>%
   add_formula(Outcome ~ .)
 
@@ -169,9 +170,15 @@ final_res %>%
 library("DALEX")
 library("DALEXtra")
 
+## variable importance from training set (default)
 temp <- training_set
 temp$Outcome = as.numeric(temp$Outcome) - 1 
 tmp <- select(temp, -Outcome)
+
+## variable importance from entire dataset (uncomment to use)
+# temp <- kmer_dt
+# temp$Outcome = as.numeric(temp$Outcome) - 1 
+# tmp <- select(temp, -Outcome)
 
 # explainer_svm <- explain_tidymodels(svm_fitted, data = temp[,-17], y = temp$Outcome)
 explainer_svm <- explain_tidymodels(svm_fitted, data = tmp, y = temp$Outcome)
