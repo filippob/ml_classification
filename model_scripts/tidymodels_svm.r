@@ -185,10 +185,15 @@ explainer_svm <- explain_tidymodels(svm_fitted, data = tmp, y = temp$Outcome)
 
 vip <- model_parts(explainer = explainer_svm)
 
+## plot
 fname <- file.path(basefolder, "variable_importance.png")
 png(fname)
 plot(vip)
 dev.off()
+
+## varimp results
+fname <- file.path(basefolder, "variable_importance.csv")
+fwrite(x = vip, file = fname)
 
 #####################################
 ## from: https://www.tmwr.org/explain
