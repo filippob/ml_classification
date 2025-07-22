@@ -12,7 +12,7 @@ input_file <- "data/dataset_v_i.csv"
 nproc <- 4
 split_ratio <- 0.80
 method_cv <- "repeatedcv"
-k_folds <- 10
+k_folds <- 5
 nrepeats_cv <- 1
 positive_class <- "vertebrate"
 
@@ -92,6 +92,7 @@ tune_wf <- workflow() %>%
 
 # We use k-fold cross-validation to tune the hyperparameters in the training set
 trees_folds <- vfold_cv(training_set, v = k_folds, repeats = nrepeats_cv)
+# trees_folds <- vfold_cv(kmer_train, v = k_folds, repeats = nrepeats_cv)
 
 # We now try to start from $\sqrt{p}$ (classification problem)
 
@@ -155,12 +156,14 @@ svm_fitted <- base_wf %>%
   add_model(final_svm) %>%
   fit(training_set)
 
+# svm_fitted <- base_wf %>%
+#   add_model(final_svm) %>%
+#   fit(kmer_train)
 
 # 4.  evaluate the fine-tuned RF model:
 print(final_res)
 final_res %>%
   collect_metrics()
-
 
 # 5.  get variable importance:
 library("DALEX")
@@ -168,9 +171,10 @@ library("DALEXtra")
 
 temp <- training_set
 temp$Outcome = as.numeric(temp$Outcome) - 1 
+tmp <- select(temp, -Outcome)
 
 # explainer_svm <- explain_tidymodels(svm_fitted, data = temp[,-17], y = temp$Outcome)
-explainer_svm <- explain_tidymodels(svm_fitted, data = temp, y = temp$Outcome)
+explainer_svm <- explain_tidymodels(svm_fitted, data = tmp, y = temp$Outcome)
 
 vip <- model_parts(explainer = explainer_svm)
 
@@ -226,3 +230,4 @@ autoplot(cm, type = "heatmap")
 dev.off()
 
 print("DONE!!")
+
