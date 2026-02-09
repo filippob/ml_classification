@@ -29,7 +29,14 @@ nrepeats_cv <- 2
 mtry_range = c(3,8) ## n. of variables to be samples randomly in each tree
 min_n_range = c(3,8) ## min number of obs in terminal nodes
 ntrees = 200
+
+## lasso
+lambda_range = c(-6, -1) ## log10 scale
+nlevels = 10 ## n. of lambda values to try in range
+
+## general
 class_weights = TRUE
+method = "lasso" ## "rf", "lasso"
 
 # create output folder
 fname = file.path(base_folder, outdir)
@@ -85,60 +92,102 @@ if (class_weights) {
 print("class weights")
 print(weight_vector)
 
-
-rf_spec <- rand_forest(
-  mtry = tune(),
-  trees = ntrees,
-  min_n = tune()
-) %>%
-  set_mode("classification") %>%
-  set_engine("randomForest", 
-             classwt = weight_vector)
+if (method == "lasso") {
+  
+  mod_spec <- logistic_reg(
+    penalty = tune(), 
+    mixture = 1 ## 1: lasso; 0: ridge
+  ) |>
+    set_mode("classification") |>
+    set_engine("glmnet",
+               classwt = weight_vector)
+} else if (method == "rf") {
+  
+  mod_spec <- rand_forest(
+    mtry = tune(),
+    trees = ntrees,
+    min_n = tune()
+  ) %>%
+    set_mode("classification") %>%
+    set_engine("randomForest", 
+               classwt = weight_vector)
+}
 
 print("model specification")
-print(rf_spec)
+print(mod_spec)
 
-tune_rf_wf <- workflow() %>%
+tune_wf <- workflow() %>%
   add_recipe(preprocess_recipe) %>%   
-  add_model(rf_spec)
+  add_model(mod_spec)
 
 print("tuning workflow")
-print(tune_rf_wf)
+print(tune_wf)
 
+#####
 writeLines(" - CV for fine-tuning of the hyperparameters ..")
 cv_folds <- vfold_cv(inpdata, v = k_folds, repeats = nrepeats_cv, strata = Outcome)  # (GROUP_VFOLD-CV BY ORDINE?)
 
+grid_regular(penalty(), levels = 5, filter = penalty <= .15)
 
-rf_grid <- grid_regular(
-  mtry(range = mtry_range),
-  min_n(range = min_n_range),
-  levels = c(max(mtry_range),max(min_n_range))
-)
+if (method == "lasso") {
+  
+  mod_grid <- grid_regular(
+    penalty(range = lambda_range), ## log10 scale
+    levels = nlevels
+  )
+  
+  # mod_grid <- grid_regular(
+  #   penalty(),
+  #   levels = nlevels,
+  #   filter = penalty <= 0.01 & penalty >= 0.0001
+  # )
+} else if (method == "rf") {
+  
+  mod_grid <- grid_regular(
+    mtry(range = mtry_range),
+    min_n(range = min_n_range),
+    levels = c(max(mtry_range),max(min_n_range))
+  )
+}
 
-rf_fine_tune_res <- tune_grid(
-  tune_rf_wf,
+
+mod_fine_tune <- tune_grid(
+  tune_wf,
   metrics = metric_set(roc_auc, accuracy, mcc),
   resamples = cv_folds,
-  grid = rf_grid
+  grid = mod_grid
 )
 
-autoplot(rf_fine_tune_res)
+autoplot(mod_fine_tune)
 
 # Plot tuning results of mcc
 
-p1 <- rf_fine_tune_res %>%
-  collect_metrics() %>%
-  filter(.metric == "mcc") %>%
-  ggplot(aes(x = mtry, y = mean, color = factor(min_n), group = min_n)) +
-  geom_line(alpha = 0.5, size = 1.5) +
-  geom_point(size = 2) +
-  labs(y = "MCC", color = "min_n", title = "MCC vs mtry") +
-  theme_minimal()
+if (method == "rf") {
+  
+  p1 <- mod_fine_tune %>%
+    collect_metrics() %>%
+    filter(.metric == "mcc") %>%
+    ggplot(aes(x = mtry, y = mean, color = factor(min_n), group = min_n)) +
+    geom_line(alpha = 0.5, size = 1.5) +
+    geom_point(size = 2) +
+    labs(y = "MCC", color = "min_n", title = "MCC vs mtry") +
+    theme_minimal()
+} else if (method == "lasso") {
+  
+  p1 <- mod_fine_tune %>%
+    collect_metrics() %>%
+    filter(.metric == "mcc") %>%
+    ggplot(aes(x = penalty, y = mean)) +
+    geom_line(alpha = 0.75, linewidth = 1.5) +
+    geom_point(size = 2) +
+    labs(y = "MCC", title = "MCC vs mtry") +
+    theme_minimal()
+}
 
 print(p1)
 
 # Collect all metrics
-all_tuning_metrics <- collect_metrics(rf_fine_tune_res)
+all_tuning_metrics <- collect_metrics(mod_fine_tune)
 
 ## Save all hyperparameters
 writeLines(" - saving results from model tuning")
@@ -147,35 +196,69 @@ fwrite(x = all_tuning_metrics, file = fname, sep = ",", col.names = TRUE)
 
 # Select best hyperparameters
 writeLines(" - selecte best hyperparameters")
-show_best(rf_fine_tune_res, metric = "mcc")
-rf_best_params <- select_best(rf_fine_tune_res, metric = "mcc")
-print(rf_best_params)
+show_best(mod_fine_tune, metric = "mcc")
+best_params <- select_best(mod_fine_tune, metric = "mcc")
+print(best_params)
 
 # Extrrf_best_params# Extract best hyperparameters
-best_mtry <- rf_best_params$mtry
-best_min_n <- rf_best_params$min_n
+
+if (method == "rf") {
+  
+  best_mtry <- best_params$mtry
+  best_min_n <- best_params$min_n
+} else if (method == "lasso") {
+  
+  best_lambda = best_params$penalty 
+}
 
 # Filter by best penalty and collect the metrics
-best_penalty_metrics <- all_tuning_metrics %>%
-  filter(mtry == best_mtry, min_n == best_min_n) %>%
-  select(.metric, mean, std_err) %>%
-  pivot_wider(names_from = .metric, values_from = c(mean, std_err), names_sep = "_")
+if (method == "rf") {
+  
+  best_penalty_metrics <- all_tuning_metrics %>%
+    filter(mtry == best_mtry, min_n == best_min_n) %>%
+    select(.metric, mean, std_err) %>%
+    pivot_wider(names_from = .metric, values_from = c(mean, std_err), names_sep = "_")
+  
+} else if (method == "lasso") {
+  
+  best_penalty_metrics <- all_tuning_metrics %>%
+    filter(penalty == best_lambda) %>%
+    select(.metric, mean, std_err) %>%
+    pivot_wider(names_from = .metric, values_from = c(mean, std_err), names_sep = "_")
+}
+
 
 # Create a full dataframe
-best_model <- data.frame(
-  mtry = best_mtry,
-  min_n = best_min_n,
-  mcc_mean = best_penalty_metrics$mean_mcc,
-  mcc_std_err = best_penalty_metrics$std_err_mcc,
-  roc_auc_mean = best_penalty_metrics$mean_roc_auc,
-  roc_auc_std_err = best_penalty_metrics$std_err_roc_auc,
-  accuracy_mean = best_penalty_metrics$mean_accuracy,
-  accuracy_std_err = best_penalty_metrics$std_err_accuracy
-)
+if (method == "rf") {
+  
+  best_model <- data.frame(
+    mtry = best_mtry,
+    min_n = best_min_n,
+    mcc_mean = best_penalty_metrics$mean_mcc,
+    mcc_std_err = best_penalty_metrics$std_err_mcc,
+    roc_auc_mean = best_penalty_metrics$mean_roc_auc,
+    roc_auc_std_err = best_penalty_metrics$std_err_roc_auc,
+    accuracy_mean = best_penalty_metrics$mean_accuracy,
+    accuracy_std_err = best_penalty_metrics$std_err_accuracy
+  )
+} else if (method == "lasso") {
+  
+  best_model <- data.frame(
+    lambda = best_lambda,
+    mcc_mean = best_penalty_metrics$mean_mcc,
+    mcc_std_err = best_penalty_metrics$std_err_mcc,
+    roc_auc_mean = best_penalty_metrics$mean_roc_auc,
+    roc_auc_std_err = best_penalty_metrics$std_err_roc_auc,
+    accuracy_mean = best_penalty_metrics$mean_accuracy,
+    accuracy_std_err = best_penalty_metrics$std_err_accuracy
+  )
+}
+
 
 ## Save best hyperparameters
 writeLines(" - saving best model parameters")
-fname = file.path(base_folder, outdir, "best_hyperparameters_tuning_rf.csv")
+temp = paste("best_hyperparameters_tuning_", method, ".csv", sep = "")
+fname = file.path(base_folder, outdir, temp)
 fwrite(x = best_model, file = fname, sep = ",", col.names = TRUE)
 
 print("DONE!")
