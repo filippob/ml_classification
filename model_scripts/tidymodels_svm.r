@@ -12,7 +12,7 @@ input_file <- "data/dataset_v_i.csv"
 nproc <- 4
 split_ratio <- 0.80
 method_cv <- "repeatedcv"
-k_folds <- 10
+k_folds <- 5
 nrepeats_cv <- 1
 positive_class <- "vertebrate"
 
@@ -92,6 +92,7 @@ tune_wf <- workflow() %>%
 
 # We use k-fold cross-validation to tune the hyperparameters in the training set
 trees_folds <- vfold_cv(training_set, v = k_folds, repeats = nrepeats_cv)
+# trees_folds <- vfold_cv(kmer_train, v = k_folds, repeats = nrepeats_cv)
 
 # We now try to start from $\sqrt{p}$ (classification problem)
 
@@ -139,8 +140,8 @@ final_svm <- finalize_model(
 
 print(final_svm)
 
-
 # 3.  finalise the workflow and fit it to the initial split (training and test data):
+## final workflow for model accuracy
 final_wf <- workflow() %>%
   add_recipe(kmer_recipe) %>%
   add_model(final_svm)
@@ -148,6 +149,7 @@ final_wf <- workflow() %>%
 final_res <- final_wf %>%
   last_fit(kmer_split, metrics = metric_set(roc_auc, accuracy, mcc, brier_class))
 
+## final workflow for variable importance (right interface for DALEX::explain_tidymodels)
 base_wf <- workflow() %>%
   add_formula(Outcome ~ .)
 
@@ -155,29 +157,43 @@ svm_fitted <- base_wf %>%
   add_model(final_svm) %>%
   fit(training_set)
 
+# svm_fitted <- base_wf %>%
+#   add_model(final_svm) %>%
+#   fit(kmer_train)
 
 # 4.  evaluate the fine-tuned RF model:
 print(final_res)
 final_res %>%
   collect_metrics()
 
-
 # 5.  get variable importance:
 library("DALEX")
 library("DALEXtra")
 
+## variable importance from training set (default)
 temp <- training_set
 temp$Outcome = as.numeric(temp$Outcome) - 1 
+tmp <- select(temp, -Outcome)
+
+## variable importance from entire dataset (uncomment to use)
+# temp <- kmer_dt
+# temp$Outcome = as.numeric(temp$Outcome) - 1 
+# tmp <- select(temp, -Outcome)
 
 # explainer_svm <- explain_tidymodels(svm_fitted, data = temp[,-17], y = temp$Outcome)
-explainer_svm <- explain_tidymodels(svm_fitted, data = temp, y = temp$Outcome)
+explainer_svm <- explain_tidymodels(svm_fitted, data = tmp, y = temp$Outcome)
 
 vip <- model_parts(explainer = explainer_svm)
 
+## plot
 fname <- file.path(basefolder, "variable_importance.png")
 png(fname)
 plot(vip)
 dev.off()
+
+## varimp results
+fname <- file.path(basefolder, "variable_importance.csv")
+fwrite(x = vip, file = fname)
 
 #####################################
 ## from: https://www.tmwr.org/explain
@@ -226,3 +242,4 @@ autoplot(cm, type = "heatmap")
 dev.off()
 
 print("DONE!!")
+

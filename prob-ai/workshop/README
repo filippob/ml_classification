@@ -1,0 +1,8 @@
+## Workshop: AI algorithms for the identification of novel probiotics 
+### University of Padova, 28 May 2025
+
+Notebooks to be used during the workshop:
+- download genomic sequences from NCBI/EBI
+- GBRAP for the extraction of genomic features
+- ML models for binary classification: Lasso-penalised logistic regression and Random Forest
+
