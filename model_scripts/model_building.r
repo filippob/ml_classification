@@ -29,6 +29,7 @@ nrepeats_cv <- 2
 mtry_range = c(3,8) ## n. of variables to be samples randomly in each tree
 min_n_range = c(3,8) ## min number of obs in terminal nodes
 ntrees = 200
+class_weights = TRUE
 
 # create output folder
 fname = file.path(base_folder, outdir)
@@ -73,12 +74,17 @@ preprocess_recipe <- recipe(Outcome ~ ., data = inpdata) %>%
 writeLines(" - model building and selection ...")
 
 # Calculate weights
-class_freq <- table(inpdata$Outcome)
-class_weights <- sum(class_freq) / (length(class_freq) * class_freq)
+if (class_weights) {
+  
+  class_freq <- table(inpdata$Outcome)
+  class_weights <- sum(class_freq) / (length(class_freq) * class_freq)
+  weight_vector = c(as.numeric(class_weights["invertebrate"]), as.numeric(class_weights["vertebrate"]))
+  
+} else weight_vector =c(1,1)
 
 print("class weights")
-print(class_weights)
-weight_vector = c(as.numeric(class_weights["invertebrate"]), as.numeric(class_weights["vertebrate"]))
+print(weight_vector)
+
 
 rf_spec <- rand_forest(
   mtry = tune(),
@@ -174,5 +180,3 @@ fwrite(x = best_model, file = fname, sep = ",", col.names = TRUE)
 
 print("DONE!")
 
-
-all_best_hyperparams <- bind_rows(all_best_hyperparams, replica_best_complete)
