@@ -23,7 +23,7 @@ nproc <- 4
 
 ## cross-validation
 k_folds <- 5
-nrepeats_cv <- 2
+nrepeats_cv <- 10
 
 ## random forest
 mtry_range = c(3,8) ## n. of variables to be samples randomly in each tree
@@ -32,7 +32,7 @@ ntrees = 200
 
 ## lasso
 lambda_range = c(-6, -1) ## log10 scale
-nlevels = 10 ## n. of lambda values to try in range
+nlevels = 20 ## n. of lambda values to try in range
 
 ## general
 class_weights = TRUE
@@ -127,8 +127,6 @@ print(tune_wf)
 writeLines(" - CV for fine-tuning of the hyperparameters ..")
 cv_folds <- vfold_cv(inpdata, v = k_folds, repeats = nrepeats_cv, strata = Outcome)  # (GROUP_VFOLD-CV BY ORDINE?)
 
-grid_regular(penalty(), levels = 5, filter = penalty <= .15)
-
 if (method == "lasso") {
   
   mod_grid <- grid_regular(
@@ -150,6 +148,7 @@ if (method == "lasso") {
   )
 }
 
+writeLines(" - finetuning of the model hyperparameters")
 
 mod_fine_tune <- tune_grid(
   tune_wf,
@@ -158,7 +157,10 @@ mod_fine_tune <- tune_grid(
   grid = mod_grid
 )
 
+fname = file.path(base_folder, outdir, "fine_tuning_autoplot.png")
+png(fname)
 autoplot(mod_fine_tune)
+dev.off()
 
 # Plot tuning results of mcc
 
@@ -184,7 +186,8 @@ if (method == "rf") {
     theme_minimal()
 }
 
-print(p1)
+fname = file.path(base_folder, outdir, "fine_tuning_MCC.png")
+ggsave(filename = fname, plot = p1, device = "png")
 
 # Collect all metrics
 all_tuning_metrics <- collect_metrics(mod_fine_tune)
