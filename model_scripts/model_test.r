@@ -39,6 +39,17 @@ writeLines(" - reading input data")
 fname = file.path(base_folder, test_data)
 test_data <- fread(fname)
 
+## preprocess test data
+writeLines(" - preprocessing test data ")
+
+preprocess_recipe <- recipe(Outcome ~ ., data = test_data) %>%
+  update_role(Species, new_role = "Species") %>%  # Species will not be used as predictor
+  step_zv(all_numeric(), -all_outcomes()) %>%
+  step_corr(all_predictors(), threshold = collinearity_threshold)
+
+prepped_recipe <- prep(preprocess_recipe)
+testdata_preprocessed <- bake(prepped_recipe, new_data = NULL)
+
 ## trained model
 writeLines(" - reading trained model")
 fname = file.path(base_folder, outdir, trained_model)
@@ -50,11 +61,11 @@ trained_model <- readRDS(fname)
 writeLines(" - calculating predictions")
 
 preds <- bind_cols(
-  predict(trained_model, test_data),
-  predict(trained_model, test_data, type = "prob")
+  predict(trained_model, testdata_preprocessed),
+  predict(trained_model, testdata_preprocessed, type = "prob")
 )
 
-temp <- test_data |>
+temp <- testdata_preprocessed |>
   select(Species, Outcome) |>
   mutate(Outcome = as.factor(Outcome))
 
