@@ -1,9 +1,11 @@
+## script to train models after fine-tuning of the hyperparameters
 
+# library("yaml")
 library("dplyr")
 library("tidyverse")
 library("tidymodels")
 library("data.table")
-
+# library("tidypredict")
 
 ###################
 # script parameters
@@ -100,7 +102,8 @@ writeLines(" - fitting the model to the training data")
 model_fit <- fit(model_wf, inpdata)
 
 writeLines(" - saving results to file")
-fname = file.path(base_folder, outdir, "trained_model.RData")
-save(model_fit, file = fname)
+temp = paste("trained_model_", method, ".RDS", sep = "")
+fname = file.path(base_folder, outdir, temp)
+saveRDS(object = model_fit, file = fname)
 
 print("DONE!!")
