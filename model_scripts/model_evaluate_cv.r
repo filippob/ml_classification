@@ -105,15 +105,34 @@ print(model_wf)
 writeLines(" - CV for fine-tuning of the hyperparameters ..")
 cv_folds <- vfold_cv(inpdata, v = k_folds, repeats = nrepeats_cv, strata = Outcome)  # (GROUP_VFOLD-CV BY ORDINE?)
 
+control <- control_resamples(save_pred = TRUE)
+
 writeLines(" - fitting model to resampled data")
 model_fit_cv <- 
   model_wf %>% 
-  fit_resamples(cv_folds, metrics = metric_set(roc_auc, accuracy, mcc))
+  fit_resamples(cv_folds, metrics = metric_set(roc_auc, accuracy, mcc), control = control)
 
 all_performances <- collect_metrics(model_fit_cv, summarize = FALSE)
 print("summary of model performance")
 collect_metrics(model_fit_cv, summarize = TRUE)
 
+temp = paste("performance_distribution_", method, ".png", sep = "")
+fname = file.path(base_folder, outdir, temp)
+
 p <- ggplot(all_performances, aes(x = .metric, y = .estimate)) + 
   geom_jitter(aes(color = .metric), width = 0.3)
+
+ggsave(filename = fname, plot = p, device = "png")
+
+all_predictions <- collect_predictions(model_fit_cv)
+
+writeLines(" - saving results")
+
+temp = paste("model_performance_cv_", method, ".csv", sep = "")
+fname = file.path(base_folder, outdir, temp)
+fwrite(x = all_performances, file = fname, sep = ",", col.names = TRUE)
+
+temp = paste("model_predictions_cv_", method, ".csv", sep = "")
+fname = file.path(base_folder, outdir, temp)
+fwrite(x = all_predictions, file = fname, sep = ",", col.names = TRUE)
 
