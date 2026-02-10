@@ -36,7 +36,7 @@ nlevels = 20 ## n. of lambda values to try in range
 
 ## general
 class_weights = TRUE
-method = "lasso" ## "rf", "lasso"
+method = "rf" ## "rf", "lasso"
 
 # create output folder
 fname = file.path(base_folder, outdir)
@@ -170,7 +170,7 @@ if (method == "rf") {
     collect_metrics() %>%
     filter(.metric == "mcc") %>%
     ggplot(aes(x = mtry, y = mean, color = factor(min_n), group = min_n)) +
-    geom_line(alpha = 0.5, size = 1.5) +
+    geom_line(alpha = 0.5, linewidth = 1.5) +
     geom_point(size = 2) +
     labs(y = "MCC", color = "min_n", title = "MCC vs mtry") +
     theme_minimal()
@@ -209,6 +209,7 @@ if (method == "rf") {
   
   best_mtry <- best_params$mtry
   best_min_n <- best_params$min_n
+  
 } else if (method == "lasso") {
   
   best_lambda = best_params$penalty 
@@ -237,6 +238,7 @@ if (method == "rf") {
   best_model <- data.frame(
     mtry = best_mtry,
     min_n = best_min_n,
+    ntrees = ntrees,
     mcc_mean = best_penalty_metrics$mean_mcc,
     mcc_std_err = best_penalty_metrics$std_err_mcc,
     roc_auc_mean = best_penalty_metrics$mean_roc_auc,
