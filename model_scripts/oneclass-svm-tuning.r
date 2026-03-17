@@ -23,7 +23,7 @@ nproc <- 4
 split_ratio <- 0.75
 method_cv <- "repeatedcv"
 k_folds <- 5
-nrepeats_cv <- 3
+nrepeats_cv <- 5
 nlevels = 10 ## levels of hyperparameters to test
 normal_class <- "Probiotic"
 target_var = "Label"
@@ -132,7 +132,7 @@ grid <- expand.grid(
 )
 
 ## 2) cv folds
-folds <- vfold_cv(training_set, v = 5, repeats = 2)
+folds <- vfold_cv(training_set, v = k_folds, repeats = nrepeats_cv)
 
 ## 3) scoring function (one-class only in the training data)
 score_model <- function(train_data, test_data, nu, sigma) {
@@ -177,8 +177,13 @@ results <- grid %>%
 
 
 ## 5) check results
-ggplot(results, aes(x = sigma, y = score)) + geom_point() + facet_wrap(~nu)
- 
+g <- ggplot(results, aes(x = sigma, y = score)) + geom_point() + facet_wrap(~nu)
+print(g)
+
+## tuning plot
+fname <- file.path(basefolder, outdir, "oneclass_tuning.png")
+ggsave(filename = fname, plot = g, device = "png", width = 7, height = 6)
+
 ## 6) select best hyperparameters
 best_params <- results %>%
   arrange(desc(score)) %>%
