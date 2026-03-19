@@ -1,4 +1,5 @@
 
+library("tools")
 library("themis")
 library("yardstick")
 library("tidymodels")
@@ -8,13 +9,14 @@ library("data.table")
 basefolder <- "/home/filippo/Documents/tania/probiotics"
 tuned_model <- "results/twoclass_tuned_model.RData"
 train_set = "splits/train_set.csv"
-test_set = "splits/test_set.csv"
+test_set = "splits/filtered_merged_bits26_testset.csv"
 outdir = "results"
 nproc <- 4
 id_vars = c("Organism", "Taxon", "Definition")
 positive_class <- "Probiotic"
 target_var = "Label"
 flag_manual = TRUE ## for manual explicit workflow
+flag_evaluation = FALSE
 
 ## load tuned model
 writeLines(" - loading tuned model")
@@ -93,76 +95,104 @@ final_res %>%
 
 
 ## evaluate on test
-test <- test %>% 
-  mutate({{target_var}} := factor(.data[[target_var]]))
 
+if(flag_evaluation) {  
+  test <- test %>% 
+    mutate({{target_var}} := factor(.data[[target_var]]))
+}
 
-if (flag_manual) {
+test_name = basename(test_set)
+
+if(flag_evaluation) {
+  if (flag_manual) {
+    
+    test_set <- bake(prepped_rec, new_data = test)
+    test_set <- test_set |> select(!all_of(id_vars))
+    
+    preds = predict(final_res, test_set, type="prob")
+    temp <- test_set |> select(!!target_var) |> pull()
+    preds$.pred_class = colnames(preds)[max.col(preds)]
+    preds$.pred_class = gsub(".pred_","",preds$.pred_class)
+    preds$.pred_class = as.factor(preds$.pred_class)
+    preds <- preds |> mutate({{target_var}} := temp)
+    
+    auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
+    acc = accuracy(preds, truth = Label, estimate = .pred_class)
+    mcc = mcc(preds, truth = Label, estimate = .pred_class)
+    brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
+    
+  } else {
+    
+    preds = predict(final_res, test, type="prob")
+    temp <- test |> select(!!target_var) |> pull()
+    preds <- preds |> mutate({{target_var}} := temp)
+    preds <- preds |> bind_cols(predict(final_res, test, type="class"))
+    
+    auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
+    acc = accuracy(preds, truth = Label, estimate = .pred_class)
+    mcc = mcc(preds, truth = Label, estimate = .pred_class)
+    brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
+  }
+  
+  df_metrics <- bind_rows(acc,auc,mcc,brier_score)
+  
+  print("Performance metrics")
+  print(df_metrics)
+  
+  fname <- file.path(basefolder, outdir, "twoclass-metrics.csv")
+  fwrite(x = df_metrics, file = fname)
+  
+  print("Confusion Matrix")
+  cm <- preds |>
+    conf_mat(!!target_var, .pred_class)
+  
+  print(cm)
+  
+  fname <- file.path(basefolder, outdir, "twoclass-confusion_matrix.png")
+  g <- autoplot(cm, type = "heatmap") + scale_fill_gradientn(colours = c("lightyellow", "yellow", "orange", "red"))
+  print(g)
+  
+  ggsave(filename = fname, plot = g, device = "png", width = 5, height = 4.5)
+  
+  writeLines(" - error analysis")
+  
+  preds <- test |>
+    select(Label, Organism, Taxon, Definition) |>
+    rename(Label_orig = Label) |>
+    bind_cols(preds)
+  
+  print(paste("N. of mismatches between labels from the test set and from collected predictions", sum(preds$Label != preds$.pred_class)))
+  
+  errors <- preds |>
+    filter(Label != .pred_class)
+  
+  fname = file.path(basefolder, outdir, "twoclass-errors.csv")
+  fwrite(x = errors, file = fname, sep = "\t")
+} else {
   
   test_set <- bake(prepped_rec, new_data = test)
   test_set <- test_set |> select(!all_of(id_vars))
   
   preds = predict(final_res, test_set, type="prob")
-  temp <- test_set |> select(!!target_var) |> pull()
-  preds$.pred_class = colnames(preds)[max.col(preds)]
-  preds$.pred_class = gsub(".pred_","",preds$.pred_class)
-  preds$.pred_class = as.factor(preds$.pred_class)
-  preds <- preds |> mutate({{target_var}} := temp)
   
-  auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
-  acc = accuracy(preds, truth = Label, estimate = .pred_class)
-  mcc = mcc(preds, truth = Label, estimate = .pred_class)
-  brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
+  preds <- preds |>
+    mutate(Label = ifelse(.pred_Nonprobiotic >= 0.5, "Nonprobiotic", "Probiotic"))
   
-} else {
+  print(table(preds$Label))
+  vec <- which(preds$Label == "Probiotic")
+  errors <- test[vec,c(1:3)]
+  errors <- errors |> bind_cols(subset(preds, Label == "Probiotic"))
   
-  preds = predict(final_res, test, type="prob")
-  temp <- test |> select(!!target_var) |> pull()
-  preds <- preds |> mutate({{target_var}} := temp)
-  preds <- preds |> bind_cols(predict(final_res, test, type="class"))
-  
-  auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
-  acc = accuracy(preds, truth = Label, estimate = .pred_class)
-  mcc = mcc(preds, truth = Label, estimate = .pred_class)
-  brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
+  #file_path_sans_ext(test_name)
+  temp = paste("twoclass-newprobiotics-", file_path_sans_ext(test_name), ".csv", sep="")
+  fname = file.path(basefolder, outdir, temp)
+  fwrite(x = errors, file = fname, sep = "\t")
+
 }
 
-df_metrics <- bind_rows(acc,auc,mcc,brier_score)
-
-print("Performance metrics")
-print(df_metrics)
-
-fname <- file.path(basefolder, outdir, "twoclass-metrics.csv")
-fwrite(x = df_metrics, file = fname)
-
-print("Confusion Matrix")
-cm <- preds |>
-  conf_mat(!!target_var, .pred_class)
-
-print(cm)
-
-fname <- file.path(basefolder, outdir, "twoclass-confusion_matrix.png")
-g <- autoplot(cm, type = "heatmap") + scale_fill_gradientn(colours = c("lightyellow", "yellow", "orange", "red"))
-print(g)
-
-ggsave(filename = fname, plot = g, device = "png", width = 5, height = 4.5)
-
-writeLines(" - error analysis")
-
-preds <- test |>
-  select(Label, Organism, Taxon, Definition) |>
-  rename(Label_orig = Label) |>
-  bind_cols(preds)
-
-print(paste("N. of mismatches between labels from the test set and from collected predictions", sum(preds$Label != preds$.pred_class)))
-
-errors <- preds |>
-  filter(Label != .pred_class)
-
-fname = file.path(basefolder, outdir, "twoclass-all_predictions.csv")
+writeLines(" - saving results")
+temp = paste("twoclass-all_predictions-", file_path_sans_ext(test_name), ".csv", sep="")
+fname = file.path(basefolder, outdir, temp)
 fwrite(x = preds, file = fname, sep = "\t")
-
-fname = file.path(basefolder, outdir, "twoclass-errors.csv")
-fwrite(x = errors, file = fname, sep = "\t")
 
 print("DONE!!")
