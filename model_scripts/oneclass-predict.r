@@ -1,5 +1,6 @@
 
 library("themis")
+library("kernlab")
 library("yardstick")
 library("tidymodels")
 library("data.table")
@@ -8,13 +9,14 @@ library("data.table")
 basefolder <- "/home/filippo/Documents/tania/probiotics"
 tuned_model <- "results/oneclass_tuned_model.RData"
 train_set = "splits/train_set.csv"
-test_set = "splits/test_set.csv"
+test_set = "splits/filtered_merged_bits26_testset.csv"
 outdir = "results"
 nproc <- 4
 id_vars = c("Organism", "Taxon", "Definition")
 normal_class <- "Probiotic"
 target_var = "Label"
 flag_manual = TRUE ## for manual explicit workflow
+flag_evaluation = FALSE
 
 ## load tuned model
 writeLines(" - loading tuned model")
@@ -80,14 +82,14 @@ writeLines(" - read test data")
 fname = file.path(basefolder, test_set)
 test <- fread(fname)
 
+test_name = basename(test_set)
+
 ## recipe (preprocessing)
 test_set <- bake(prep_dt, new_data = test)
 
 #####################################################
 #####################################################
 ## 8) evaluate trained model
-writeLines(" - model evaluation: decision")
-
 #####################################################
 ## Decision value	Meaning
 ## > 0	inside the learned region (inlier / normal)
@@ -101,55 +103,67 @@ test$decision = preds
 
 vec <- which(preds < 0)
 
-ndec = ncol(test)
-nonprobs <- test[vec, c(1,2,3,4,ndec), with = FALSE]
-nonprobs$predicted_label = "Nonprobiotic"
-
-probs <- test[-vec, c(1,2,3,4,ndec), with = FALSE]
-probs$predicted_label = "Probiotic"
-
-preds <- probs |> bind_rows(nonprobs)
-preds$Label = as.factor(preds$Label)
-preds$predicted_label = as.factor(preds$predicted_label)
-
-# Large positive values → strongly normal
-# Values near 0 → borderline
-# Large negative values → strong anomalies
-
-print("Confusion Matrix")
-cm <- preds |>
-  conf_mat(!!target_var, predicted_label)
-print(cm)
-
-fname <- file.path(basefolder, outdir, "oneclass-confusion_matrix.png")
-g <- autoplot(cm, type = "heatmap") + scale_fill_gradientn(colours = c("lightyellow", "yellow", "orange", "red"))
-print(g)
-ggsave(filename = fname, plot = g, device = "png", width = 5, height = 4.5)
-
-print("Performance metrics")
-# auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
-acc = accuracy(preds, truth = Label, estimate = predicted_label)
-mcc = mcc(preds, truth = Label, estimate = predicted_label)
-# brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
-
-df_metrics <- bind_rows(acc,mcc)
-print(df_metrics)
+if(flag_evaluation) {
+  
+  writeLines(" - model evaluation: decision")
+  ndec = ncol(test)
+  nonprobs <- test[vec, c(1,2,3,4,ndec), with = FALSE]
+  nonprobs$predicted_label = "Nonprobiotic"
+  
+  probs <- test[-vec, c(1,2,3,4,ndec), with = FALSE]
+  probs$predicted_label = "Probiotic"
+  
+  preds <- probs |> bind_rows(nonprobs)
+  preds$Label = as.factor(preds$Label)
+  preds$predicted_label = as.factor(preds$predicted_label)
+  
+  # Large positive values → strongly normal
+  # Values near 0 → borderline
+  # Large negative values → strong anomalies
+  
+  print("Confusion Matrix")
+  cm <- preds |>
+    conf_mat(!!target_var, predicted_label)
+  print(cm)
+  
+  fname <- file.path(basefolder, outdir, "oneclass-confusion_matrix.png")
+  g <- autoplot(cm, type = "heatmap") + scale_fill_gradientn(colours = c("lightyellow", "yellow", "orange", "red"))
+  print(g)
+  ggsave(filename = fname, plot = g, device = "png", width = 5, height = 4.5)
+  
+  print("Performance metrics")
+  # auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
+  acc = accuracy(preds, truth = Label, estimate = predicted_label)
+  mcc = mcc(preds, truth = Label, estimate = predicted_label)
+  # brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
+  
+  df_metrics <- bind_rows(acc,mcc)
+  print(df_metrics)
+}
 
 #####################################################
 #####################################################
 
 ## error analysis
 writeLines(" - error analysis")
-vec <- which(preds$Label != preds$predicted_label)
-errors <- preds[vec,]
+if(flag_evaluation) {
+  
+  vec <- which(preds$Label != preds$predicted_label)
+  errors <- preds[vec,]
+  print(paste("N. of mismatches between labels from the test set and from collected predictions", length(vec)))
+} else {
+  
+  errors <- test[-vec,] |> select(c(all_of(id_vars), "decision"))
+}
 
-print(paste("N. of mismatches between labels from the test set and from collected predictions", length(vec)))
 
 writeLines(" - saving results")
-fname = file.path(basefolder, outdir, "oneclass-all_predictions.csv")
+temp = paste("oneclass-all_predictions-", file_path_sans_ext(test_name), ".csv", sep="")
+fname = file.path(basefolder, outdir, temp)
 fwrite(x = preds, file = fname, sep = "\t")
 
-fname = file.path(basefolder, outdir, "oneclass-errors.csv")
+temp = paste("oneclass-errors-", file_path_sans_ext(test_name), ".csv", sep="")
+fname = file.path(basefolder, outdir, temp)
 fwrite(x = errors, file = fname, sep = "\t")
 
 print("DONE!!")
