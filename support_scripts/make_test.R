@@ -7,11 +7,13 @@ library("data.table")
 
 ## Parameters
 basefolder <- "/home/filippo/Documents/tania/probiotics"
-input_file <- "data/filtered_merged_bits26_testset.csv"
+# input_file <- "data/filtered_merged_bits26_testset.csv"
+input_file = "data/preliminary_data.xlsx"
+additional_data = "data/filtered_merged_niccolo_probiotics.csv"
 outdir = "splits"
-target_var = NULL
-nclass_minority = NULL
-nclass_majority = NULL
+target_var = "Label" ## or NULL
+nclass_minority = 8
+nclass_majority = 32
 to_remove = c("Assembly", "Class", "Locus_ID", "Version") ## columns to remove
 
 
@@ -24,11 +26,30 @@ if (ext %in% c("xlsx")) {
   dataset <- readxl::read_xlsx(fname)
 } else dataset <- fread(fname)
 
+if (!is.null(additional_data) & additional_data != "") {
+  
+  add_data = fread(additional_data)
+  add_data <- add_data |>
+    mutate(!!target_var := "Probiotic") |>
+    relocate(!!target_var)
+  
+  dataset <- dataset |>
+    bind_rows(add_data)
+  
+  rm(add_data)
+}
+
 print(paste("Data size (n. records):",nrow(dataset)))
+print("Class distribution before cleaning")
+print(table(dataset$Label))
 
 ## Data preparation
-## making target variable a factor
+## data cleaning
+strains_to_remove = c("Akkermansia_muciniphila_ATCC_BAA-835", "Escherichia_coli_str._K-12_substr._MG1655")
+dataset <- dataset |>
+  filter(!(Organism %in% strains_to_remove))
 
+## making target variable a factor
 if (!is.null(target_var)) {
   
   print("making the target variable a factor")
