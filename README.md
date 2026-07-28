@@ -13,4 +13,8 @@ A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used 
 
 ### ML for probiotics discovery
 
-1. [make_test.R](https://github.com/filippob/ml_classification/blob/main/support_scripts/make_test.R)
+1. training/test split: [make_test.R](https://github.com/filippob/ml_classification/blob/main/support_scripts/make_test.R)
+2. model tuning:
+    -  [twoclass-svm-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-tuning.r)
+    -  https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-svm-tuning.r
+4. model evaluation and final predictions on unlabelled data
