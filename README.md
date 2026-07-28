@@ -17,6 +17,6 @@ A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used 
 2. model tuning:
     -  [twoclass-svm-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-tuning.r)
     -  [oneclass-svm-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-svm-tuning.r)
-3. i) model evaluation and ii) final predictions on unlabelled data:
+3. i) **model evaluation** and ii) **final predictions** on unlabelled data:
    - [twoclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-predict.r)
    - [oneclass-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-predict.r)
