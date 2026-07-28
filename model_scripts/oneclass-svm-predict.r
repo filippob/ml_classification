@@ -7,7 +7,7 @@ library("data.table")
 
 ## Parameters
 basefolder <- "/home/filippo/Documents/tania/probiotics"
-tmstmp = "1785251448"
+tmstmp = "1785259989"
 tuned_model <- "oneclass_tuned_model.RData"
 train_set = "splits/train_set.csv"
 # test_set = "splits/filtered_merged_bits26_testset.csv"
@@ -182,11 +182,11 @@ preds$tmstmp = tmstmp
 errors$tmstmp = tmstmp
 
 writeLines(" - saving results")
-temp = paste("oneclass-all_predictions-", file_path_sans_ext(test_name), ".csv", sep="")
+temp = paste("oneclass-all_predictions-", tools::file_path_sans_ext(test_name), ".csv", sep="")
 fname = file.path(basefolder, outdir, tmstmp, temp)
 fwrite(x = preds, file = fname, sep = "\t")
 
-temp = paste("oneclass-errors-", file_path_sans_ext(test_name), ".csv", sep="")
+temp = paste("oneclass-errors-", tools::file_path_sans_ext(test_name), ".csv", sep="")
 fname = file.path(basefolder, outdir, tmstmp, temp)
 fwrite(x = errors, file = fname, sep = "\t")
 
