@@ -10,3 +10,7 @@ to be later used in the final classification model.
 
 A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used to tell probiotics from non probiotics 
 (an example of **one-class classification** problem), based on a set of genomic features.
+
+### ML for probiotics discovery
+
+1. [make_test.R](https://github.com/filippob/ml_classification/blob/main/support_scripts/make_test.R)
