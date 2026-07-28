@@ -11,18 +11,33 @@ library("tidymodels")
 library("data.table")
 
 ## Parameters
+tmstmp = as.integer(Sys.time())
 basefolder <- "/home/filippo/Documents/tania/probiotics"
 input_file <- "splits/train_set.csv"
 outdir = "results"
-# input_file <- "data/subset.csv"
 nproc <- 4
-split_ratio <- 0.75
 method_cv <- "repeatedcv"
-k_folds <- 5
-nrepeats_cv <- 5
-nlevels = 10 ## levels of hyperparameters to test
+k_folds <- 3
+nrepeats_cv <- 1
+nlevels = 3 ## levels of hyperparameters to test
 target_var = "Label"
 id_vars = c("Organism", "Taxon", "Definition")
+# split_ratio <- 0.75
+
+
+## log file
+fname = paste(tmstmp, ".twoclass-svm-tuning.r.log", sep="")
+logn = file.path(basefolder, "log", fname)
+fileConn <- file(logn)
+data_list = list("timestamp"=tmstmp, "basefolder"=basefolder, "input_file"=input_file, "outdir"=outdir, 
+                 "nproc"=nproc, "method_cv"=method_cv, "k_folds"=k_folds, "nrepeats_cv"=nrepeats_cv, 
+                 "nlevels"=nlevels, "target_var"=target_var, "id_vars"=id_vars)
+lines <- paste0(names(data_list), ": ", unlist(data_list))
+writeLines(lines, fileConn)
+close(fileConn)
+
+## make timestamp directory
+dir.create(file.path(basefolder, outdir, tmstmp), showWarnings = FALSE)
 
 ## Import dataset
 writeLines(" - reading the data ...")
@@ -45,13 +60,16 @@ cl <- parallel::makeCluster(nproc)
 doParallel::registerDoParallel(cl)
 
 ## training/test split
-writeLines(" - splitting the data in training/test stes")
-dt_split <- initial_split(dataset, strata = !!target_var, prop = split_ratio)
-dt_train <- training(dt_split)
-dt_test <- testing(dt_split)
+# writeLines(" - splitting the data in training/test stes")
+# dt_split <- initial_split(dataset, strata = !!target_var, prop = split_ratio)
+# dt_train <- training(dt_split)
+# dt_test <- testing(dt_split)
+# 
+# dt_train$Label |> table()
+# dt_test$Label |> table()
 
-dt_train$Label |> table()
-dt_test$Label |> table()
+dt_train <- dataset
+rm(dataset)
 
 #### Preprocessing
 
@@ -150,19 +168,19 @@ weigh(cleaned_finetune)
 
 writeLines(" - saving results")
 ## tuned model
-fname <- file.path(basefolder, outdir, "twoclass_tuned_model.RData")
+fname <- file.path(basefolder, outdir, tmstmp, "twoclass_tuned_model.RData")
 to_save = list(cleaned_finetune)
 to_save[[2]] = svm_spec
 to_save[[3]] = svm_recipe
-to_save[[4]] = dt_split
+to_save[[4]] = tmstmp
 save(to_save, file = fname)
 
 ## tuning results
-fname <- file.path(basefolder, outdir, "twoclass_tuning_results.csv")
+fname <- file.path(basefolder, outdir, tmstmp, "twoclass_tuning_results.csv")
 fwrite(x = tuning_res, file = fname, sep = ",")
 
 ## tuning plot
-fname <- file.path(basefolder, outdir, "twoclass_tuning.png")
+fname <- file.path(basefolder, outdir, tmstmp, "twoclass_tuning.png")
 ggsave(filename = fname, plot = g, device = "png", width = 7, height = 6)
 
 print("DONE!!")

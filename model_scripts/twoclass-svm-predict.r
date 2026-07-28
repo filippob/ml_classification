@@ -7,26 +7,45 @@ library("data.table")
 
 ## Parameters
 basefolder <- "/home/filippo/Documents/tania/probiotics"
-tuned_model <- "results/twoclass_tuned_model.RData"
+tmstmp = "1785245898"
+tuned_model <- "twoclass_tuned_model.RData"
 train_set = "splits/train_set.csv"
 test_set = "splits/filtered_merged_bits26_testset.csv"
+# test_set = "splits/test_set.csv"
 outdir = "results"
 nproc <- 4
-id_vars = c("Organism", "Taxon", "Definition")
 positive_class <- "Probiotic"
 target_var = "Label"
 flag_manual = TRUE ## for manual explicit workflow
-flag_evaluation = FALSE
+flag_evaluation = FALSE ## for model evaluation (if you have the true labels)
+id_vars = c("Organism", "Taxon", "Definition")
 
 ## load tuned model
 writeLines(" - loading tuned model")
-fname = file.path(basefolder, tuned_model)
+fname = file.path(basefolder, outdir, tmstmp, tuned_model)
 load(fname)
 
 fine_tune_res <- to_save[[1]]
 svm_spec = to_save[[2]]
 svm_recipe = to_save[[3]]
-dt_split = to_save[[4]]
+
+if(tmstmp  == to_save[[4]]) {
+  print("Correct timestamp (match with tuned model): proceed!")
+  } else {
+    print("the provided and saved timestamps don't match: the script will be stopped")
+    stop()
+}
+
+## log file
+fname = paste(tmstmp, ".twoclass-svm-predict.r.log", sep="")
+logn = file.path(basefolder, "log", fname)
+fileConn <- file(logn)
+data_list = list("timestamp"=tmstmp, "basefolder"=basefolder, "tuned_model"=tuned_model, "outdir"=outdir, 
+                 "train_set"=train_set, "test_set"=test_set, "nproc"=nproc, "positive_class"=positive_class, 
+                 "target_var"=target_var, "flag_manual"=flag_manual, "flag_evaluation"=flag_evaluation, "id_vars"=id_vars)
+lines <- paste0(names(data_list), ": ", unlist(data_list))
+writeLines(lines, fileConn)
+close(fileConn)
 
 ## read training and test data
 writeLines(" - read training data")
@@ -135,11 +154,12 @@ if(flag_evaluation) {
   }
   
   df_metrics <- bind_rows(acc,auc,mcc,brier_score)
+  df_metrics$tmstmp = tmstmp
   
   print("Performance metrics")
   print(df_metrics)
   
-  fname <- file.path(basefolder, outdir, "twoclass-metrics.csv")
+  fname <- file.path(basefolder, outdir, tmstmp, "twoclass-metrics.csv")
   fwrite(x = df_metrics, file = fname)
   
   print("Confusion Matrix")
@@ -148,7 +168,7 @@ if(flag_evaluation) {
   
   print(cm)
   
-  fname <- file.path(basefolder, outdir, "twoclass-confusion_matrix.png")
+  fname <- file.path(basefolder, outdir, tmstmp, "twoclass-confusion_matrix.png")
   g <- autoplot(cm, type = "heatmap") + scale_fill_gradientn(colours = c("lightyellow", "yellow", "orange", "red"))
   print(g)
   
@@ -166,7 +186,9 @@ if(flag_evaluation) {
   errors <- preds |>
     filter(Label != .pred_class)
   
-  fname = file.path(basefolder, outdir, "twoclass-errors.csv")
+  errors$tmstmp = tmstmp
+  
+  fname = file.path(basefolder, outdir, tmstmp, "twoclass-errors.csv")
   fwrite(x = errors, file = fname, sep = "\t")
 } else {
   
@@ -182,17 +204,20 @@ if(flag_evaluation) {
   vec <- which(preds$Label == "Probiotic")
   errors <- test[vec,c(1:3)]
   errors <- errors |> bind_cols(subset(preds, Label == "Probiotic"))
+  errors$tmstmp = tmstmp
   
   #file_path_sans_ext(test_name)
   temp = paste("twoclass-newprobiotics-", file_path_sans_ext(test_name), ".csv", sep="")
-  fname = file.path(basefolder, outdir, temp)
+  fname = file.path(basefolder, outdir, tmstmp, temp)
   fwrite(x = errors, file = fname, sep = "\t")
 
 }
 
+preds$tmstmp = tmstmp
+
 writeLines(" - saving results")
 temp = paste("twoclass-all_predictions-", file_path_sans_ext(test_name), ".csv", sep="")
-fname = file.path(basefolder, outdir, temp)
+fname = file.path(basefolder, outdir, tmstmp, temp)
 fwrite(x = preds, file = fname, sep = "\t")
 
 print("DONE!!")
