@@ -15,19 +15,34 @@ library("tidymodels")
 library("data.table")
 
 ## Parameters
+tmstmp = as.integer(Sys.time())
 basefolder <- "/home/filippo/Documents/tania/probiotics"
 input_file <- "splits/train_set.csv"
 outdir = "results"
 # input_file <- "data/subset.csv"
 nproc <- 4
-split_ratio <- 0.75
+# split_ratio <- 0.75
 method_cv <- "repeatedcv"
-k_folds <- 5
-nrepeats_cv <- 5
+k_folds <- 3
+nrepeats_cv <- 1
 nlevels = 10 ## levels of hyperparameters to test
 normal_class <- "Probiotic"
 target_var = "Label"
 to_remove = c("Organism", "Taxon", "Definition")
+
+## log file
+fname = paste(tmstmp, ".oneclass-svm-tuning.r.log", sep="")
+logn = file.path(basefolder, "log", fname)
+fileConn <- file(logn)
+data_list = list("timestamp"=tmstmp, "basefolder"=basefolder, "input_file"=input_file, "outdir"=outdir, 
+                 "nproc"=nproc, "method_cv"=method_cv, "k_folds"=k_folds, "nrepeats_cv"=nrepeats_cv, 
+                 "nlevels"=nlevels, "normal_class"=normal_class, "target_var"=target_var, "to_remove"=to_remove)
+lines <- paste0(names(data_list), ": ", unlist(data_list))
+writeLines(lines, fileConn)
+close(fileConn)
+
+## make timestamp directory
+dir.create(file.path(basefolder, outdir, tmstmp), showWarnings = FALSE)
 
 ## Import dataset
 writeLines(" - reading the data ...")
@@ -69,7 +84,7 @@ cl <- parallel::makeCluster(nproc)
 doParallel::registerDoParallel(cl)
 
 ## training/test split
-writeLines(" - splitting the data in training/test stes")
+# writeLines(" - splitting the data in training/test stes")
 # dt_split <- initial_split(dataset, strata = !!target_var, prop = split_ratio)
 # dt_train <- training(dt_split)
 # dt_test <- testing(dt_split)
@@ -148,8 +163,7 @@ score_model <- function(train_data, test_data, nu, sigma) {
     )
     
     pred <- predict(model, as.matrix(test_data))
-    
-    mean(pred)
+    print(mean(pred))
     
   }, error = function(e) {
     NA_real_
@@ -181,7 +195,7 @@ g <- ggplot(results, aes(x = sigma, y = score)) + geom_point() + facet_wrap(~nu)
 print(g)
 
 ## tuning plot
-fname <- file.path(basefolder, outdir, "oneclass_tuning.png")
+fname <- file.path(basefolder, outdir, tmstmp, "oneclass_tuning.png")
 ggsave(filename = fname, plot = g, device = "png", width = 7, height = 6)
 
 ## 6) select best hyperparameters
@@ -193,9 +207,10 @@ print(best_params)
 
 writeLines(" - saving results")
 ## tuned model
-fname <- file.path(basefolder, outdir, "oneclass_tuned_model.RData")
+fname <- file.path(basefolder, outdir,tmstmp, "oneclass_tuned_model.RData")
 to_save = list(results)
 to_save[[2]] = svm_recipe
+to_save[[3]] = tmstmp
 save(to_save, file = fname)
 
 print("DONE!!")
