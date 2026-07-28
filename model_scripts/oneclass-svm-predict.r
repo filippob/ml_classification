@@ -7,24 +7,44 @@ library("data.table")
 
 ## Parameters
 basefolder <- "/home/filippo/Documents/tania/probiotics"
-tuned_model <- "results/oneclass_tuned_model.RData"
+tmstmp = "1785251448"
+tuned_model <- "oneclass_tuned_model.RData"
 train_set = "splits/train_set.csv"
-test_set = "splits/filtered_merged_bits26_testset.csv"
+# test_set = "splits/filtered_merged_bits26_testset.csv"
+test_set = "splits/test_set.csv"
 outdir = "results"
 nproc <- 4
-id_vars = c("Organism", "Taxon", "Definition")
 normal_class <- "Probiotic"
 target_var = "Label"
 flag_manual = TRUE ## for manual explicit workflow
-flag_evaluation = FALSE
+flag_evaluation = TRUE
+id_vars = c("Organism", "Taxon", "Definition")
 
 ## load tuned model
 writeLines(" - loading tuned model")
-fname = file.path(basefolder, tuned_model)
+fname = file.path(basefolder, outdir, tmstmp, tuned_model)
 load(fname)
 
 fine_tune_res <- to_save[[1]]
 svm_recipe = to_save[[2]]
+
+if(tmstmp  == to_save[[3]]) {
+  print("Correct timestamp (match with tuned model): proceed!")
+} else {
+  print("the provided and saved timestamps don't match: the script will be stopped")
+  stop()
+}
+
+## log file
+fname = paste(tmstmp, ".oneclass-svm-predict.r.log", sep="")
+logn = file.path(basefolder, "log", fname)
+fileConn <- file(logn)
+data_list = list("timestamp"=tmstmp, "basefolder"=basefolder, "tuned_model"=tuned_model, "outdir"=outdir, 
+                 "train_set"=train_set, "test_set"=test_set, "nproc"=nproc, "normal_class"=normal_class, 
+                 "target_var"=target_var, "flag_manual"=flag_manual, "flag_evaluation"=flag_evaluation, "id_vars"=id_vars)
+lines <- paste0(names(data_list), ": ", unlist(data_list))
+writeLines(lines, fileConn)
+close(fileConn)
 
 ## 6) select best hyperparameters
 best_params <- fine_tune_res %>%
@@ -126,7 +146,7 @@ if(flag_evaluation) {
     conf_mat(!!target_var, predicted_label)
   print(cm)
   
-  fname <- file.path(basefolder, outdir, "oneclass-confusion_matrix.png")
+  fname <- file.path(basefolder, outdir, tmstmp, "oneclass-confusion_matrix.png")
   g <- autoplot(cm, type = "heatmap") + scale_fill_gradientn(colours = c("lightyellow", "yellow", "orange", "red"))
   print(g)
   ggsave(filename = fname, plot = g, device = "png", width = 5, height = 4.5)
@@ -138,6 +158,7 @@ if(flag_evaluation) {
   # brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
   
   df_metrics <- bind_rows(acc,mcc)
+  df_metrics$tmstmp = tmstmp
   print(df_metrics)
 }
 
@@ -154,16 +175,20 @@ if(flag_evaluation) {
 } else {
   
   errors <- test[-vec,] |> select(c(all_of(id_vars), "decision"))
+  preds <- test |> select(c(all_of(id_vars), "decision"))
 }
 
+preds$tmstmp = tmstmp
+errors$tmstmp = tmstmp
 
 writeLines(" - saving results")
 temp = paste("oneclass-all_predictions-", file_path_sans_ext(test_name), ".csv", sep="")
-fname = file.path(basefolder, outdir, temp)
+fname = file.path(basefolder, outdir, tmstmp, temp)
 fwrite(x = preds, file = fname, sep = "\t")
 
 temp = paste("oneclass-errors-", file_path_sans_ext(test_name), ".csv", sep="")
-fname = file.path(basefolder, outdir, temp)
+fname = file.path(basefolder, outdir, tmstmp, temp)
 fwrite(x = errors, file = fname, sep = "\t")
 
 print("DONE!!")
+
