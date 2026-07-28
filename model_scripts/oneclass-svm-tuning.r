@@ -18,7 +18,7 @@ library("data.table")
 tmstmp = as.integer(Sys.time())
 basefolder <- "/home/filippo/Documents/tania/probiotics"
 input_file <- "splits/train_set.csv"
-outdir = "results"
+outdir = "results/oneclass/svm"
 # input_file <- "data/subset.csv"
 nproc <- 4
 # split_ratio <- 0.75
@@ -42,7 +42,7 @@ writeLines(lines, fileConn)
 close(fileConn)
 
 ## make timestamp directory
-dir.create(file.path(basefolder, outdir, tmstmp), showWarnings = FALSE)
+dir.create(file.path(basefolder, outdir, tmstmp), showWarnings = FALSE, recursive = TRUE)
 
 ## Import dataset
 writeLines(" - reading the data ...")

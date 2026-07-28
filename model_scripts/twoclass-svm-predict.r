@@ -12,7 +12,7 @@ tuned_model <- "twoclass_tuned_model.RData"
 train_set = "splits/train_set.csv"
 test_set = "splits/filtered_merged_bits26_testset.csv"
 # test_set = "splits/test_set.csv"
-outdir = "results"
+outdir = "results/twoclass/svm"
 nproc <- 4
 positive_class <- "Probiotic"
 target_var = "Label"

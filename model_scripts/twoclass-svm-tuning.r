@@ -14,12 +14,12 @@ library("data.table")
 tmstmp = as.integer(Sys.time())
 basefolder <- "/home/filippo/Documents/tania/probiotics"
 input_file <- "splits/train_set.csv"
-outdir = "results"
+outdir = "results/twoclass/svm"
 nproc <- 4
 method_cv <- "repeatedcv"
-k_folds <- 3
-nrepeats_cv <- 1
-nlevels = 3 ## levels of hyperparameters to test
+k_folds <- 5
+nrepeats_cv <- 3
+nlevels = 10 ## levels of hyperparameters to test
 target_var = "Label"
 id_vars = c("Organism", "Taxon", "Definition")
 # split_ratio <- 0.75
@@ -37,7 +37,7 @@ writeLines(lines, fileConn)
 close(fileConn)
 
 ## make timestamp directory
-dir.create(file.path(basefolder, outdir, tmstmp), showWarnings = FALSE)
+dir.create(file.path(basefolder, outdir, tmstmp), showWarnings = FALSE, recursive = TRUE)
 
 ## Import dataset
 writeLines(" - reading the data ...")
