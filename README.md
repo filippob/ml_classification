@@ -23,3 +23,4 @@ A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used 
 4. parse results: use the script `support_scripts/parse_results.r` ([here](https://github.com/filippob/ml_classification/blob/main/support_scripts/parse_results.r)) to collect all results from the different model runs:
     - results are saved separately per problem (twoclass, oneclass classification) and method (SVM)
     - the different replicates show the variability of results
+5. Finally, you can make plots and tables from combined results using the [figures_prob-ai.R](https://github.com/filippob/ml_classification/blob/main/scripts_for_papers/figures_prob-ai.R) script
