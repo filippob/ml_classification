@@ -1,5 +1,6 @@
 library("repr")
 library("dials")
+library("glmnet")
 library("readxl")
 library("themis")
 library("lobstr")
