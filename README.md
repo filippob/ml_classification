@@ -20,3 +20,6 @@ A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used 
 3. i) **model evaluation** and ii) **final predictions** on unlabelled data:
    - [twoclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-predict.r)
    - [oneclass-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-predict.r)
+4. parse results: use the script `support_scripts/parse_results.r` to collect all results from the different model runs:
+    - results are saved separately per problem (twoclass, oneclass classification) and method (SVM)
+    - the different replicates show the variability of results
