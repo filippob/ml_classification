@@ -117,7 +117,7 @@ tune_spec <- boost_tree(
   trees = tune(),
   tree_depth = tune(), 
   min_n = tune(),
-  loss_reduction = tune(),                     ## first three: model complexity
+  loss_reduction = 0,                     ## first three: model complexity
   sample_size = tune(), 
   mtry = floor(sqrt(m)),         ## randomness
   learn_rate = tune()                          ## step size
@@ -136,10 +136,11 @@ dt_folds <- vfold_cv(dt_train, v = k_folds, repeats = nrepeats_cv, strata = !!ta
 
 ## grid of hyperparameter values
 hyper_grid <- grid_space_filling(
-  trees(range = c(200,1000)),
+  trees(range = c(500,1000)),
   tree_depth(),
   min_n(),
-  loss_reduction(),
+  # loss_reduction = 0,
+  # loss_reduction(),
   sample_size = sample_prop(range = c(0.25,0.75)),
   learn_rate(),
   size = nlevels
@@ -176,7 +177,7 @@ options(repr.plot.width=14, repr.plot.height=8)
 dd <- fine_tune_res %>%
   collect_metrics() %>%
   filter(.metric == "mcc", !is.na(mean)) %>%
-  select(c(trees, min_n, tree_depth, learn_rate, loss_reduction, sample_size, mean)) |>
+  select(c(trees, min_n, tree_depth, learn_rate, sample_size, mean)) |>
   mutate(learn_rate = log10(learn_rate)) |>
   gather(key = "hyperparameter", value = "value", -mean) |>
   rename(mcc = mean) 
