@@ -13,9 +13,13 @@ A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used 
 
 ### ML for probiotics discovery
 
+Here we try different ML methods (SVM, Lasso-penalised logistic regression, gradient boosting) for the discovery of novel probiotic strains from tabular data of genomic features extracted from genome sequences: 
+
 1. training/test split: [make_test.R](https://github.com/filippob/ml_classification/blob/main/support_scripts/make_test.R)
 2. model tuning:
     -  [twoclass-svm-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-tuning.r)
+    -  [twoclass-lasso-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-lasso-tuning.r)
+    -  [twoclass-boosting-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-boosting-tuning.r)
     -  [oneclass-svm-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-svm-tuning.r)
 3. i) **model evaluation** and ii) **final predictions** on unlabelled data:
    - [twoclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-predict.r)
