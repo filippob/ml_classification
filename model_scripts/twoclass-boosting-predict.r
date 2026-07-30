@@ -1,0 +1,228 @@
+
+library("tools")
+library("themis")
+library("xgboost")
+library("yardstick")
+library("tidymodels")
+library("data.table")
+
+## Parameters
+basefolder <- "/home/filippo/Documents/tania/probiotics"
+tmstmp = "1785425580"
+problem = "twoclass"
+method = "boosting"
+resdir = "results"
+tuned_model <- "twoclass_tuned_model.RData"
+train_set = "splits/train_set.csv"
+test_set = "splits/filtered_merged_bits26_testset.csv"
+# test_set = "splits/test_set.csv"
+nproc <- 4
+positive_class <- "Probiotic"
+target_var = "Label"
+flag_manual = TRUE ## for manual explicit workflow
+flag_evaluation = FALSE ## for model evaluation (if you have the true labels)
+id_vars = c("Organism", "Taxon", "Definition")
+
+## load tuned model
+writeLines(" - loading tuned model")
+fname = file.path(basefolder, resdir, problem, method, tmstmp, tuned_model)
+load(fname)
+
+fine_tune_res <- to_save[[1]]
+tune_spec = to_save[[2]]
+model_recipe = to_save[[3]]
+m = to_save[[5]]
+
+if(tmstmp  == to_save[[4]]) {
+  print("Correct timestamp (match with tuned model): proceed!")
+  } else {
+    print("the provided and saved timestamps don't match: the script will be stopped")
+    stop()
+}
+
+## log file
+fname = paste(tmstmp, ".twoclass-boosting-predict.r.log", sep="")
+logn = file.path(basefolder, "log", fname)
+fileConn <- file(logn)
+data_list = list("timestamp"=tmstmp, "basefolder"=basefolder, "tuned_model"=tuned_model, "method"=method,"resdir"=resdir, 
+                 "problem"=problem, "train_set"=train_set, "test_set"=test_set, "nproc"=nproc, "positive_class"=positive_class, 
+                 "target_var"=target_var, "flag_manual"=flag_manual, "flag_evaluation"=flag_evaluation, "id_vars"=id_vars)
+lines <- paste0(names(data_list), ": ", unlist(data_list))
+writeLines(lines, fileConn)
+close(fileConn)
+
+## read training and test data
+writeLines(" - read training data")
+fname = file.path(basefolder, train_set)
+train <- fread(fname)
+
+writeLines(" - read test data")
+fname = file.path(basefolder, test_set)
+test <- fread(fname)
+
+writeLines(" - show best model")
+best_model <- select_best(x = fine_tune_res, metric = "mcc")
+show_best(fine_tune_res, metric = "mcc")
+
+# 2.  finalise the model:
+writeLines(" - finalise model")
+
+## Data preparation
+train <- train %>% 
+  mutate({{target_var}} := factor(.data[[target_var]]))
+
+prepped_rec <- prep(model_recipe)
+
+final_model <- finalize_model(
+  tune_spec,
+  best_model
+)
+
+# 3.  finalise the workflow and fit it to the initial split (training and test data):
+## final workflow for model accuracy
+
+if (flag_manual) {
+  
+  ## with no data augmentation
+  training_set <- bake(prepped_rec, new_data = train)
+  training_set <- training_set |> select(!all_of(id_vars))
+  # table(training_set$Label)
+  
+  final_wf <- workflow() %>%
+    add_formula(reformulate(".", response = target_var)) %>%
+    add_model(final_model)
+  
+  print(final_wf)
+  
+  final_res <- final_wf |> fit(data = training_set)
+  
+} else {
+  
+  final_wf <- workflow() %>%
+    add_recipe(model_recipe) %>%
+    add_model(final_model)
+  
+  # training_set <- juice(prepped_rec)
+  # table(training_set$Label)
+  
+  final_res <- final_wf |> fit(data = train)
+}
+
+print(final_res)
+
+final_res %>%
+  extract_fit_parsnip()
+
+# final_res <- final_wf %>%
+#   last_fit(dt_split, metrics = metric_set(roc_auc, accuracy, mcc, brier_class))
+
+
+## evaluate on test
+
+if(flag_evaluation) {  
+  test <- test %>% 
+    mutate({{target_var}} := factor(.data[[target_var]]))
+}
+
+test_name = basename(test_set)
+
+if(flag_evaluation) {
+  if (flag_manual) {
+    
+    test_set <- bake(prepped_rec, new_data = test)
+    test_set <- test_set |> select(!all_of(id_vars))
+    
+    preds = predict(final_res, test_set, type="prob")
+    temp <- test_set |> select(!!target_var) |> pull()
+    preds$.pred_class = colnames(preds)[max.col(preds)]
+    preds$.pred_class = gsub(".pred_","",preds$.pred_class)
+    preds$.pred_class = as.factor(preds$.pred_class)
+    preds <- preds |> mutate({{target_var}} := temp)
+    preds$.pred_class = factor(preds$.pred_class, levels = c("Nonprobiotic", "Probiotic"))
+    
+    auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
+    acc = accuracy(preds, truth = Label, estimate = .pred_class)
+    mcc = mcc(preds, truth = Label, estimate = .pred_class)
+    brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
+    
+  } else {
+    
+    preds = predict(final_res, test, type="prob")
+    temp <- test |> select(!!target_var) |> pull()
+    preds <- preds |> mutate({{target_var}} := temp)
+    preds <- preds |> bind_cols(predict(final_res, test, type="class"))
+    
+    auc = roc_auc(preds, truth = Label, .pred_Nonprobiotic)
+    acc = accuracy(preds, truth = Label, estimate = .pred_class)
+    mcc = mcc(preds, truth = Label, estimate = .pred_class)
+    brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
+  }
+  
+  df_metrics <- bind_rows(acc,auc,mcc,brier_score)
+  df_metrics$tmstmp = tmstmp
+  
+  print("Performance metrics")
+  print(df_metrics)
+  
+  fname <- file.path(basefolder, resdir, problem, method, tmstmp, "twoclass-metrics.csv")
+  fwrite(x = df_metrics, file = fname)
+  
+  print("Confusion Matrix")
+  cm <- preds |>
+    conf_mat(!!target_var, .pred_class)
+  
+  print(cm)
+  
+  fname <- file.path(basefolder, resdir, problem, method, tmstmp, "twoclass-confusion_matrix.png")
+  g <- autoplot(cm, type = "heatmap") + scale_fill_gradientn(colours = c("lightyellow", "yellow", "orange", "red"))
+  print(g)
+  
+  ggsave(filename = fname, plot = g, device = "png", width = 5, height = 4.5)
+  
+  writeLines(" - error analysis")
+  
+  preds <- test |>
+    select(Label, Organism, Taxon, Definition) |>
+    rename(Label_orig = Label) |>
+    bind_cols(preds)
+  
+  print(paste("N. of mismatches between labels from the test set and from collected predictions", sum(preds$Label != preds$.pred_class)))
+  
+  errors <- preds |>
+    filter(Label != .pred_class)
+  
+  errors$tmstmp = tmstmp
+  
+  fname = file.path(basefolder, resdir, problem, method, tmstmp, "twoclass-errors.csv")
+  fwrite(x = errors, file = fname, sep = "\t")
+} else {
+  
+  test_set <- bake(prepped_rec, new_data = test)
+  test_set <- test_set |> select(!all_of(id_vars))
+  
+  preds = predict(final_res, test_set, type="prob")
+  
+  preds <- preds |>
+    mutate(Label = ifelse(.pred_Nonprobiotic >= 0.5, "Nonprobiotic", "Probiotic"))
+  
+  print(table(preds$Label))
+  vec <- which(preds$Label == "Probiotic")
+  errors <- test[vec,c(1:3)]
+  errors <- errors |> bind_cols(subset(preds, Label == "Probiotic"))
+  errors$tmstmp = tmstmp
+  
+  #file_path_sans_ext(test_name)
+  temp = paste("twoclass-newprobiotics-", file_path_sans_ext(test_name), ".csv", sep="")
+  fname = file.path(basefolder, resdir, problem, method, tmstmp, temp)
+  fwrite(x = errors, file = fname, sep = "\t")
+
+}
+
+preds$tmstmp = tmstmp
+
+writeLines(" - saving results")
+temp = paste("twoclass-all_predictions-", file_path_sans_ext(test_name), ".csv", sep="")
+fname = file.path(basefolder, resdir, problem, method, tmstmp, temp)
+fwrite(x = preds, file = fname, sep = "\t")
+
+print("DONE!!")
