@@ -28,8 +28,8 @@ Here we try different ML methods (SVM, Lasso-penalised logistic regression, grad
    - [oneclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-svm-predict.r)
   
    The `-predict.r` scripts have two indicator parameters (config file) that controls the mode of analysis:
-   - flag_manual = TRUE/FALSE: usually FALSE, if TRUE you get more control of the intermediate steps and how the accuracy metrics are calculated (the results are however expected to be the same as when this is FALSE)
-   - flag_evaluation = FALSE ## for model evaluation (if you have the true labels)
+   - `flag_manual = TRUE/FALSE`: usually FALSE, if TRUE you get more control of the intermediate steps and how the accuracy metrics are calculated (the results are however expected to be the same as when this is FALSE)
+   - `flag_evaluation = TRUE/FALSE`: when TRUE, the model accuracy is calculated; mind you, this is possible only if you have true labels (test data set aside for evaluation). If you have a new dataset where you want to make actual predictions (you don't know what they are), evaluate this to FALSE: this is usually what is really interesting to do with your model 
 
 5. parse results: use the script `support_scripts/parse_results.r` ([here](https://github.com/filippob/ml_classification/blob/main/support_scripts/parse_results.r)) to collect all results from the different model runs:
     - results are saved separately per problem (twoclass, oneclass classification) and method (SVM)
