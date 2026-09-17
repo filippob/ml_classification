@@ -25,7 +25,7 @@ Here we try different ML methods (SVM, Lasso-penalised logistic regression, grad
    - [twoclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-predict.r)
    - [twoclass-lasso-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-lasso-predict.r)
    - [twoclass-boosting-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-boosting-predict.r)
-   - [oneclass-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-predict.r)
+   - [oneclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-svm-predict.r)
 4. parse results: use the script `support_scripts/parse_results.r` ([here](https://github.com/filippob/ml_classification/blob/main/support_scripts/parse_results.r)) to collect all results from the different model runs:
     - results are saved separately per problem (twoclass, oneclass classification) and method (SVM)
     - the different replicates show the variability of results
