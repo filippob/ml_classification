@@ -7,16 +7,16 @@ library("data.table")
 
 ## Parameters
 basefolder <- "/home/filippo/Documents/tania/probiotics"
-tmstmp = "1785245898"
+tmstmp = "1785331549"
 tuned_model <- "twoclass_tuned_model.RData"
 train_set = "splits/train_set.csv"
 test_set = "splits/filtered_merged_bits26_testset.csv"
-# test_set = "splits/test_set.csv"
+#test_set = "splits/test_set.csv"
 outdir = "results/twoclass/svm"
 nproc <- 4
 positive_class <- "Probiotic"
 target_var = "Label"
-flag_manual = TRUE ## for manual explicit workflow
+flag_manual = FALSE ## for manual explicit workflow
 flag_evaluation = FALSE ## for model evaluation (if you have the true labels)
 id_vars = c("Organism", "Taxon", "Definition")
 
@@ -98,9 +98,6 @@ if (flag_manual) {
     add_recipe(svm_recipe) %>%
     add_model(final_svm)
   
-  # training_set <- juice(prepped_rec)
-  # table(training_set$Label)
-  
   final_res <- final_wf |> fit(data = train)
 }
 
@@ -122,8 +119,8 @@ if(flag_evaluation) {
 
 test_name = basename(test_set)
 
-if(flag_evaluation) {
-  if (flag_manual) {
+if(flag_evaluation) { ## eval = TRUE
+  if (flag_manual) { ## manual = TRUE
     
     test_set <- bake(prepped_rec, new_data = test)
     test_set <- test_set |> select(!all_of(id_vars))
@@ -140,7 +137,7 @@ if(flag_evaluation) {
     mcc = mcc(preds, truth = Label, estimate = .pred_class)
     brier_score = brier_class(preds, truth = Label, .pred_Probiotic)
     
-  } else {
+  } else { ## manual = FALSE
     
     preds = predict(final_res, test, type="prob")
     temp <- test |> select(!!target_var) |> pull()
@@ -190,12 +187,14 @@ if(flag_evaluation) {
   
   fname = file.path(basefolder, outdir, tmstmp, "twoclass-errors.csv")
   fwrite(x = errors, file = fname, sep = "\t")
-} else {
+} else { ## flag evaluation == FALSE
   
-  test_set <- bake(prepped_rec, new_data = test)
-  test_set <- test_set |> select(!all_of(id_vars))
-  
-  preds = predict(final_res, test_set, type="prob")
+  if (flag_manual) {
+    test_set <- bake(prepped_rec, new_data = test)
+    test_set <- test_set |> select(!all_of(id_vars))
+    
+    preds = predict(final_res, test_set, type="prob")
+  } else preds = predict(final_res, test, type="prob")
   
   preds <- preds |>
     mutate(Label = ifelse(.pred_Nonprobiotic >= 0.5, "Nonprobiotic", "Probiotic"))
