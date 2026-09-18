@@ -13,14 +13,25 @@ A second script [classify_probiotics.R](workflow/classify_probiotics.R) is used 
 
 ### ML for probiotics discovery
 
+Here we try different ML methods (SVM, Lasso-penalised logistic regression, gradient boosting) for the discovery of novel probiotic strains from tabular data of genomic features extracted from genome sequences: 
+
 1. training/test split: [make_test.R](https://github.com/filippob/ml_classification/blob/main/support_scripts/make_test.R)
 2. model tuning:
     -  [twoclass-svm-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-tuning.r)
+    -  [twoclass-lasso-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-lasso-tuning.r)
+    -  [twoclass-boosting-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-boosting-tuning.r)
     -  [oneclass-svm-tuning.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-svm-tuning.r)
 3. i) **model evaluation** and ii) **final predictions** on unlabelled data:
    - [twoclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-svm-predict.r)
-   - [oneclass-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-predict.r)
-4. parse results: use the script `support_scripts/parse_results.r` ([here](https://github.com/filippob/ml_classification/blob/main/support_scripts/parse_results.r)) to collect all results from the different model runs:
+   - [twoclass-lasso-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-lasso-predict.r)
+   - [twoclass-boosting-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/twoclass-boosting-predict.r)
+   - [oneclass-svm-predict.r](https://github.com/filippob/ml_classification/blob/main/model_scripts/oneclass-svm-predict.r)
+  
+   The `-predict.r` scripts have two indicator parameters (config file) that controls the mode of analysis:
+   - `flag_manual = TRUE/FALSE`: usually FALSE, if TRUE you get more control of the intermediate steps and how the accuracy metrics are calculated (the results are however expected to be the same as when this is FALSE)
+   - `flag_evaluation = TRUE/FALSE`: when TRUE, the model accuracy is calculated; mind you, this is possible only if you have true labels (test data set aside for evaluation). If you have a new dataset where you want to make actual predictions (you don't know what they are), evaluate this to FALSE: this is usually what is really interesting to do with your model 
+
+5. parse results: use the script `support_scripts/parse_results.r` ([here](https://github.com/filippob/ml_classification/blob/main/support_scripts/parse_results.r)) to collect all results from the different model runs:
     - results are saved separately per problem (twoclass, oneclass classification) and method (SVM)
     - the different replicates show the variability of results
-5. Finally, you can make plots and tables from combined results using the [figures_prob-ai.R](https://github.com/filippob/ml_classification/blob/main/scripts_for_papers/figures_prob-ai.R) script
+6. Finally, you can make plots and tables from combined results using the [figures_prob-ai.R](https://github.com/filippob/ml_classification/blob/main/scripts_for_papers/figures_prob-ai.R) script
