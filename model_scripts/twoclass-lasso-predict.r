@@ -193,10 +193,12 @@ if(flag_evaluation) {
   fwrite(x = errors, file = fname, sep = "\t")
 } else {
   
-  test_set <- bake(prepped_rec, new_data = test)
-  test_set <- test_set |> select(!all_of(id_vars))
-  
-  preds = predict(final_res, test_set, type="prob")
+  if (flag_manual) {
+    test_set <- bake(prepped_rec, new_data = test)
+    test_set <- test_set |> select(!all_of(id_vars))
+    
+    preds = predict(final_res, test_set, type="prob")
+  } else preds = predict(final_res, test, type="prob")
   
   preds <- preds |>
     mutate(Label = ifelse(.pred_Nonprobiotic >= 0.5, "Nonprobiotic", "Probiotic"))
